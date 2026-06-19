@@ -69,3 +69,9 @@ class UserViewSet(viewsets.ModelViewSet):
     search_fields = ['username', 'email', 'first_name', 'last_name']
     ordering_fields = ['username', 'email', 'first_name', 'last_name', 'date_joined', 'last_login', 'is_active']
     ordering = ['username']
+
+    def get_permissions(self):
+        if self.action == 'create':
+            return [permissions.AllowAny()]
+
+        return super().get_permissions()
