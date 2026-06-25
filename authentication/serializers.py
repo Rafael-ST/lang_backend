@@ -3,6 +3,8 @@ from django.contrib.auth.password_validation import validate_password
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
+from perfil.models import Perfil
+
 
 User = get_user_model()
 
@@ -55,6 +57,7 @@ class UserSerializer(serializers.ModelSerializer):
         user = User(**validated_data)
         user.set_password(password)
         user.save()
+        Perfil.objects.get_or_create(user=user)
         return user
 
     def update(self, instance, validated_data):
