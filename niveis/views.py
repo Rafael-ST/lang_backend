@@ -1,4 +1,5 @@
 from rest_framework import filters, viewsets
+from rest_framework.permissions import IsAuthenticated
 
 from niveis.filters import NivelFilterBackend
 from niveis.models import Nivel
@@ -7,6 +8,7 @@ from niveis.serializers import NivelSerializer
 
 class NivelViewSet(viewsets.ModelViewSet):
     queryset = Nivel.objects.all().order_by('nome')
+    permission_classes = [IsAuthenticated]
     serializer_class = NivelSerializer
     filter_backends = [
         NivelFilterBackend,
