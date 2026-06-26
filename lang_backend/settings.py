@@ -44,6 +44,8 @@ INSTALLED_APPS = [
     'categorias',
     'cards',
     'perfil',
+    'niveis',
+    'subniveis',
 ]
 
 MIDDLEWARE = [

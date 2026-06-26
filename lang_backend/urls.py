@@ -9,6 +9,8 @@ urlpatterns = [
     path('api/v1/', include('categorias.urls')),
     path('api/v1/', include('cards.urls')),
     path('api/v1/', include('perfil.urls')),
+    path('api/v1/', include('niveis.urls')),
+    path('api/v1/', include('subniveis.urls')),
     
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
     # Optional UI:
