@@ -3,11 +3,13 @@ from rest_framework import filters, viewsets
 from cards.filters import CardFilterBackend
 from cards.models import Card
 from cards.serializers import CardSerializer
+from rest_framework.permissions import IsAuthenticated
 
 
 class CardViewSet(viewsets.ModelViewSet):
     queryset = Card.objects.all().order_by('english_name')
     serializer_class = CardSerializer
+    permission_classes = [IsAuthenticated]
     filter_backends = [
         CardFilterBackend,
         filters.SearchFilter,
