@@ -4,14 +4,14 @@ from rest_framework.filters import BaseFilterBackend
 class SubNivelFilterBackend(BaseFilterBackend):
     def filter_queryset(self, request, queryset, view):
         nome = request.query_params.get('nome')
-        subnivel = request.query_params.get('subnivel') or request.query_params.get('nivel')
+        nivel = request.query_params.get('nivel') or request.query_params.get('subnivel')
         is_active = request.query_params.get('is_active')
 
         if nome:
             queryset = queryset.filter(nome__icontains=nome)
 
-        if subnivel:
-            queryset = queryset.filter(subnivel_id=subnivel)
+        if nivel:
+            queryset = queryset.filter(subnivel_id=nivel)
 
         if is_active is not None:
             value = is_active.lower()
