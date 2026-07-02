@@ -6,6 +6,7 @@ class Exercise(models.Model):
         WRITE_FROM_TEXT_AUDIO = "write_translation_from_text_audio", "Escrever com texto e audio"
         WRITE_FROM_AUDIO = "write_translation_from_audio", "Escrever ouvindo audio"
         SPEAK_WRITTEN_TEXT = "speak_written_text", "Falar texto escrito"
+        JUST_AUDIO = "just_audio", "Apenas audio"
 
     card = models.ForeignKey(
         "cards.Card",

@@ -11,6 +11,7 @@ class CardSerializer(serializers.ModelSerializer):
             'english_name',
             'international_name',
             'categoria',
+            'audio',
             'is_active',
             'created_at',
             'updated_at',
