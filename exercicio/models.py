@@ -1,4 +1,10 @@
 from django.db import models
+from rest_framework import settings
+from app.models import BaseModel
+from django.conf import settings
+
+
+from ExerciseSet.models import ExerciseSet
 
 class Exercise(models.Model):
     class ExerciseType(models.TextChoices):
@@ -8,6 +14,15 @@ class Exercise(models.Model):
         SPEAK_WRITTEN_TEXT = "speak_written_text", "Falar texto escrito"
         JUST_AUDIO = "just_audio", "Apenas audio"
 
+    exercise_set = models.ForeignKey(
+        ExerciseSet,
+        on_delete=models.CASCADE,
+        related_name='exercises',
+        verbose_name='Conjunto de exercicios',
+        null=True,
+        blank=True,
+    )
+    
     card = models.ForeignKey(
         "cards.Card",
         on_delete=models.CASCADE,
@@ -35,3 +50,10 @@ class Exercise(models.Model):
 
     def __str__(self):
         return f"{self.get_type_display()} - {self.card}"
+
+class ExerciseAttempt(BaseModel):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    exercise_set = models.ForeignKey(ExerciseSet, on_delete=models.CASCADE)
+    exercise = models.ForeignKey(Exercise, on_delete=models.CASCADE)
+    is_correct = models.BooleanField(default=True)
+    answer = models.JSONField(default=dict, blank=True)

@@ -51,6 +51,7 @@ INSTALLED_APPS = [
     'niveis',
     'subniveis',
     'exercicio',
+    'ExerciseSet',
 ]
 
 MIDDLEWARE = [

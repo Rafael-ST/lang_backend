@@ -16,6 +16,7 @@ urlpatterns = [
     path('api/v1/', include('niveis.urls')),
     path('api/v1/', include('subniveis.urls')),
     path('api/v1/', include('exercicio.urls')),
+    path('api/v1/', include('ExerciseSet.urls')),
     
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
     # Optional UI:
