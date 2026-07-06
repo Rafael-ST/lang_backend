@@ -1,0 +1,193 @@
+{% load static %}
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Lang Admin - Exercicios</title>
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="{% static 'exercicio/exercise_builder.css' %}" />
+  </head>
+  <body>
+    <nav class="navbar navbar-expand-lg border-bottom bg-white sticky-top">
+      <div class="container-fluid px-4">
+        <span class="navbar-brand fw-semibold">Lang Admin</span>
+        <div class="d-flex align-items-center gap-2">
+          <span id="connectionStatus" class="badge text-bg-secondary">Desconectado</span>
+          <button id="reloadDataButton" class="btn btn-outline-primary btn-sm" type="button">
+            <i class="bi bi-arrow-clockwise"></i>
+            Recarregar
+          </button>
+        </div>
+      </div>
+    </nav>
+
+    <main class="container-fluid px-4 py-4" data-api-base-url="/api/v1">
+      <div class="row g-4">
+        <aside class="col-12 col-xl-3">
+          <section class="panel">
+            <h1 class="h5 mb-3">Conexao da API</h1>
+            <div class="vstack gap-3">
+              <label class="form-label mb-0">
+                URL da API
+                <input id="apiBaseUrl" class="form-control mt-1" type="text" value="/api/v1" />
+              </label>
+              <label class="form-label mb-0">
+                Access token
+                <textarea
+                  id="accessToken"
+                  class="form-control mt-1"
+                  rows="4"
+                  placeholder="Cole o JWT usado no app"
+                ></textarea>
+              </label>
+              <button id="saveConnectionButton" class="btn btn-primary" type="button">
+                <i class="bi bi-plug"></i>
+                Salvar e carregar
+              </button>
+              <div class="form-text">As credenciais ficam somente no localStorage deste navegador.</div>
+            </div>
+          </section>
+
+          <section class="panel mt-4">
+            <h2 class="h6 mb-3">Filtros</h2>
+            <div class="vstack gap-3">
+              <label class="form-label mb-0">
+                Buscar card
+                <input id="cardSearch" class="form-control mt-1" type="search" placeholder="Hello, Ola..." />
+              </label>
+              <label class="form-label mb-0">
+                Buscar conjunto
+                <input id="setSearch" class="form-control mt-1" type="search" placeholder="Nivel 1..." />
+              </label>
+            </div>
+          </section>
+        </aside>
+
+        <section class="col-12 col-xl-5">
+          <form id="exerciseForm" class="panel needs-validation" novalidate>
+            <div class="d-flex align-items-start justify-content-between gap-3 mb-4">
+              <div>
+                <p class="text-uppercase text-primary small fw-semibold mb-1">Novo exercicio</p>
+                <h2 class="h4 mb-0">Criador guiado</h2>
+              </div>
+              <button class="btn btn-success" type="submit">
+                <i class="bi bi-cloud-upload"></i>
+                Criar
+              </button>
+            </div>
+
+            <div id="alertBox" class="alert d-none" role="alert"></div>
+
+            <div class="row g-3">
+              <div class="col-12">
+                <label class="form-label" for="exerciseSet">Conjunto</label>
+                <select id="exerciseSet" class="form-select" required></select>
+                <div class="invalid-feedback">Selecione um conjunto.</div>
+              </div>
+
+              <div class="col-12">
+                <label class="form-label" for="card">Card</label>
+                <select id="card" class="form-select" required></select>
+                <div class="invalid-feedback">Selecione um card.</div>
+              </div>
+
+              <div class="col-12 col-md-7">
+                <label class="form-label" for="exerciseType">Tipo</label>
+                <select id="exerciseType" class="form-select" required>
+                  <option value="just_audio">Apresentacao com audio</option>
+                  <option value="multiple_choice_translation">Multipla escolha: traducao</option>
+                  <option value="write_translation_from_text_audio">Escrever traducao: texto + audio</option>
+                  <option value="write_translation_from_audio">Escrever ouvindo audio</option>
+                  <option value="speak_written_text">Falar texto escrito</option>
+                </select>
+              </div>
+
+              <div class="col-6 col-md-3">
+                <label class="form-label" for="order">Ordem</label>
+                <input id="order" class="form-control" type="number" min="0" value="0" />
+              </div>
+
+              <div class="col-6 col-md-2">
+                <label class="form-label" for="difficulty">Dific.</label>
+                <input id="difficulty" class="form-control" type="number" min="1" max="5" value="1" />
+              </div>
+
+              <div class="col-12">
+                <div class="form-check form-switch">
+                  <input id="isActive" class="form-check-input" type="checkbox" checked />
+                  <label class="form-check-label" for="isActive">Ativo</label>
+                </div>
+              </div>
+            </div>
+
+            <hr class="my-4" />
+
+            <div class="row g-3">
+              <div class="col-12 col-md-6 prompt-text-field">
+                <label class="form-label" for="promptText">Texto exibido</label>
+                <input id="promptText" class="form-control" type="text" />
+              </div>
+              <div class="col-12 col-md-6 prompt-audio-field">
+                <label class="form-label" for="audioFile">Audio</label>
+                <input id="audioFile" class="form-control" type="file" accept="audio/*" />
+                <div id="currentAudio" class="form-text"></div>
+              </div>
+              <div class="col-12 col-md-6 translation-field">
+                <label class="form-label" for="translation">Traducao correta</label>
+                <input id="translation" class="form-control" type="text" />
+              </div>
+              <div class="col-12 col-md-6 expected-field">
+                <label class="form-label" for="expectedTranscript">Transcricao esperada</label>
+                <input id="expectedTranscript" class="form-control" type="text" />
+              </div>
+              <div class="col-12 accept-field">
+                <label class="form-label" for="acceptedAnswers">Respostas aceitas</label>
+                <input id="acceptedAnswers" class="form-control" type="text" placeholder="Separe alternativas por virgula" />
+              </div>
+            </div>
+
+            <section id="optionsSection" class="mt-4 d-none">
+              <div class="d-flex align-items-center justify-content-between gap-3 mb-2">
+                <h3 class="h6 mb-0">Alternativas</h3>
+                <button id="addOptionButton" class="btn btn-outline-primary btn-sm" type="button">
+                  <i class="bi bi-plus-lg"></i>
+                  Adicionar
+                </button>
+              </div>
+              <div id="optionsList" class="vstack gap-2"></div>
+            </section>
+          </form>
+        </section>
+
+        <section class="col-12 col-xl-4">
+          <section class="panel preview-panel">
+            <div class="d-flex align-items-center justify-content-between gap-3 mb-3">
+              <h2 class="h5 mb-0">Preview JSON</h2>
+              <button id="copyJsonButton" class="btn btn-outline-secondary btn-sm" type="button">
+                <i class="bi bi-clipboard"></i>
+                Copiar
+              </button>
+            </div>
+            <pre id="jsonPreview" class="json-preview">{}</pre>
+          </section>
+
+          <section class="panel mt-4">
+            <h2 class="h6 mb-3">Ultimos cards carregados</h2>
+            <div id="cardSummary" class="summary-list"></div>
+          </section>
+        </section>
+      </div>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="{% static 'exercicio/exercise_builder.js' %}"></script>
+  </body>
+</html>
