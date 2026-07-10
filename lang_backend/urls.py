@@ -9,6 +9,7 @@ from drf_spectacular.views import SpectacularAPIView, SpectacularRedocView, Spec
 
 
 urlpatterns = [
+    path('exercise-builder/login/', TemplateView.as_view(template_name='exercicio/exercise_builder_login.html'), name='exercise-builder-login'),
     path('exercise-builder/', TemplateView.as_view(template_name='exercicio/exercise_builder.html'), name='exercise-builder'),
     path('admin/', admin.site.urls),
     path('api/v1/', include('authentication.urls')),

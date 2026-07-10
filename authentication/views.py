@@ -2,6 +2,7 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 from rest_framework import filters, permissions, status, viewsets
 from rest_framework.response import Response
+from rest_framework.decorators import action
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 from authentication.serializers import CustomTokenObtainPairSerializer, UserSerializer
@@ -74,4 +75,17 @@ class UserViewSet(viewsets.ModelViewSet):
         if self.action == 'create':
             return [permissions.AllowAny()]
 
+        if self.action == 'me':
+            return [permissions.IsAuthenticated()]
+
         return super().get_permissions()
+
+    @action(detail=False, methods=['get', 'patch'], url_path='me')
+    def me(self, request):
+        if request.method == 'GET':
+            return Response(self.get_serializer(request.user).data)
+
+        serializer = self.get_serializer(request.user, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data)

@@ -20,10 +20,15 @@
       <div class="container-fluid px-4">
         <span class="navbar-brand fw-semibold">Lang Admin</span>
         <div class="d-flex align-items-center gap-2">
+          <span id="currentUser" class="small text-secondary"></span>
           <span id="connectionStatus" class="badge text-bg-secondary">Desconectado</span>
           <button id="reloadDataButton" class="btn btn-outline-primary btn-sm" type="button">
             <i class="bi bi-arrow-clockwise"></i>
             Recarregar
+          </button>
+          <button id="logoutButton" class="btn btn-outline-danger btn-sm" type="button">
+            <i class="bi bi-box-arrow-right"></i>
+            Sair
           </button>
         </div>
       </div>
@@ -39,20 +44,11 @@
                 URL da API
                 <input id="apiBaseUrl" class="form-control mt-1" type="text" value="/api/v1" />
               </label>
-              <label class="form-label mb-0">
-                Access token
-                <textarea
-                  id="accessToken"
-                  class="form-control mt-1"
-                  rows="4"
-                  placeholder="Cole o JWT usado no app"
-                ></textarea>
-              </label>
               <button id="saveConnectionButton" class="btn btn-primary" type="button">
                 <i class="bi bi-plug"></i>
                 Salvar e carregar
               </button>
-              <div class="form-text">As credenciais ficam somente no localStorage deste navegador.</div>
+              <div class="form-text">A sessao e gerenciada automaticamente pelo login.</div>
             </div>
           </section>
 

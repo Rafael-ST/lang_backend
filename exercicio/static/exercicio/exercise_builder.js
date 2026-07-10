@@ -1,5 +1,6 @@
 (function () {
   const STORAGE_KEY = "langExerciseBuilder";
+  const LOGIN_URL = "/exercise-builder/login/";
 
   const state = {
     cards: [],
@@ -11,7 +12,8 @@
   const elements = {
     page: document.querySelector("main[data-api-base-url]"),
     apiBaseUrl: document.querySelector("#apiBaseUrl"),
-    accessToken: document.querySelector("#accessToken"),
+    currentUser: document.querySelector("#currentUser"),
+    logoutButton: document.querySelector("#logoutButton"),
     saveConnectionButton: document.querySelector("#saveConnectionButton"),
     reloadDataButton: document.querySelector("#reloadDataButton"),
     connectionStatus: document.querySelector("#connectionStatus"),
@@ -43,18 +45,21 @@
 
   function init() {
     loadConnection();
+    if (!readStorage().accessToken) {
+      window.location.replace(LOGIN_URL);
+      return;
+    }
     bindEvents();
     addDefaultOptionRows();
     updateTypeFields();
     updatePreview();
 
-    if (elements.accessToken.value.trim()) {
-      loadApiData();
-    }
+    loadApiData();
   }
 
   function bindEvents() {
     elements.saveConnectionButton.addEventListener("click", saveConnectionAndLoad);
+    elements.logoutButton.addEventListener("click", logout);
     elements.reloadDataButton.addEventListener("click", loadApiData);
     elements.cardSearch.addEventListener("input", renderCards);
     elements.setSearch.addEventListener("input", renderExerciseSets);
@@ -74,7 +79,7 @@
   function loadConnection() {
     const saved = readStorage();
     elements.apiBaseUrl.value = saved.apiBaseUrl || elements.page.dataset.apiBaseUrl || "/api/v1";
-    elements.accessToken.value = saved.accessToken || "";
+    elements.currentUser.textContent = saved.usuario?.username || "";
   }
 
   function readStorage() {
@@ -90,7 +95,8 @@
       STORAGE_KEY,
       JSON.stringify({
         apiBaseUrl: getApiBaseUrl(),
-        accessToken: elements.accessToken.value.trim(),
+        accessToken: readStorage().accessToken,
+        usuario: readStorage().usuario,
       })
     );
     loadApiData();
@@ -121,35 +127,68 @@
 
   async function apiRequest(path, options = {}) {
     const baseUrl = getApiBaseUrl();
+    const { authRetry = false, ...fetchOptions } = options;
 
     if (!baseUrl) {
       throw new Error("Informe a URL da API.");
     }
 
-    const isFormData = options.body instanceof FormData;
+    const isFormData = fetchOptions.body instanceof FormData;
     const headers = {
       ...(isFormData ? {} : { "Content-Type": "application/json" }),
-      ...(options.headers || {}),
+      ...(fetchOptions.headers || {}),
     };
 
-    const token = elements.accessToken.value.trim();
+    const token = readStorage().accessToken;
 
     if (token) {
       headers.Authorization = `Bearer ${token}`;
     }
 
     const response = await fetch(`${baseUrl}${path}`, {
-      ...options,
+      ...fetchOptions,
       headers,
       credentials: "include",
     });
     const data = await response.json().catch(() => null);
+
+    if (response.status === 401) {
+      if (authRetry) {
+        logout();
+        throw new Error("Sua sessao expirou. Entre novamente.");
+      }
+      const refreshed = await refreshAccessToken();
+      if (refreshed) {
+        return apiRequest(path, { ...fetchOptions, authRetry: true });
+      }
+      logout();
+      throw new Error("Sua sessao expirou. Entre novamente.");
+    }
 
     if (!response.ok) {
       throw new Error(getApiErrorMessage(data));
     }
 
     return data;
+  }
+
+  async function refreshAccessToken() {
+    const response = await fetch(`${getApiBaseUrl()}/auth/token/refresh/`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: "{}",
+    });
+    if (!response.ok) return false;
+    const data = await response.json();
+    const saved = readStorage();
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...saved, accessToken: data.access }));
+    return true;
+  }
+
+  function logout() {
+    localStorage.removeItem(STORAGE_KEY);
+    window.location.replace(LOGIN_URL);
   }
 
   function getApiBaseUrl() {
