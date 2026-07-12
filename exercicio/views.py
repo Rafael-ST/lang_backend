@@ -54,6 +54,22 @@ class ExerciseViewSet(viewsets.ModelViewSet):
         else:
             is_correct = bool(is_correct)
 
+        review = request.data.get('review', False)
+        if isinstance(review, str):
+            review = review.lower() in ['true', '1', 'sim']
+        else:
+            review = bool(review)
+
+        if review:
+            return Response(
+                {
+                    'exercise_completed': is_correct,
+                    'review': True,
+                    'set_completed': False,
+                },
+                status=status.HTTP_200_OK,
+            )
+
         with transaction.atomic():
             ExerciseAttempt.objects.create(
                 user=request.user,

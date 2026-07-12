@@ -3,7 +3,7 @@ from django.contrib.auth.password_validation import validate_password
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
-from perfil.models import Perfil
+from perfil.models import DEFAULT_PROFILE_POINTS, Perfil
 
 
 User = get_user_model()
@@ -57,7 +57,10 @@ class UserSerializer(serializers.ModelSerializer):
         user = User(**validated_data)
         user.set_password(password)
         user.save()
-        Perfil.objects.get_or_create(user=user)
+        Perfil.objects.get_or_create(
+            user=user,
+            defaults={'pontos': DEFAULT_PROFILE_POINTS},
+        )
         return user
 
     def update(self, instance, validated_data):

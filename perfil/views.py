@@ -2,6 +2,7 @@ from rest_framework import filters, permissions, viewsets
 
 from perfil.models import Perfil
 from perfil.serializers import PerfilSerializer
+from perfil.services import recover_profile_points_for_user
 
 
 class PerfilViewSet(viewsets.ModelViewSet):
@@ -23,6 +24,18 @@ class PerfilViewSet(viewsets.ModelViewSet):
             return queryset
 
         return queryset.filter(user=self.request.user)
+
+    def list(self, request, *args, **kwargs):
+        if not request.user.is_staff:
+            recover_profile_points_for_user(request.user)
+
+        return super().list(request, *args, **kwargs)
+
+    def retrieve(self, request, *args, **kwargs):
+        if not request.user.is_staff:
+            recover_profile_points_for_user(request.user)
+
+        return super().retrieve(request, *args, **kwargs)
 
     def perform_create(self, serializer):
         if self.request.user.is_staff:
