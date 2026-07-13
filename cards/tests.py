@@ -1,10 +1,11 @@
 from django.urls import reverse
+from django.contrib.auth import get_user_model
 
 from django.test import TestCase
 from rest_framework import status
 from rest_framework.test import APIClient
 
-from cards.models import Card
+from cards.models import Card, UserCardAccess
 from categorias.models import Categoria
 
 
@@ -112,3 +113,38 @@ class CardApiTests(TestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data), 1)
         self.assertEqual(response.data[0]['id'], str(expected_card.id))
+
+
+class MarkCardsSeenApiTests(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+        self.user = get_user_model().objects.create_user(
+            username='learner',
+            password='test-password',
+        )
+        self.client.force_authenticate(self.user)
+        self.categoria = Categoria.objects.create(nome='Test Category')
+        self.card = Card.objects.create(
+            english_name='Hello',
+            international_name='Ola',
+            categoria=self.categoria,
+        )
+        self.url = reverse('card-mark-seen')
+
+    def test_marks_a_card_as_first_seen_only_once(self):
+        payload = {'card_ids': [str(self.card.id)]}
+
+        first_response = self.client.post(self.url, payload, format='json')
+        second_response = self.client.post(self.url, payload, format='json')
+
+        self.assertEqual(first_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            first_response.data['first_seen_card_ids'],
+            [str(self.card.id)],
+        )
+        self.assertEqual(second_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(second_response.data['first_seen_card_ids'], [])
+        self.assertEqual(
+            UserCardAccess.objects.filter(user=self.user, card=self.card).count(),
+            1,
+        )

@@ -17,3 +17,10 @@ class CardSerializer(serializers.ModelSerializer):
             'updated_at',
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
+
+
+class MarkCardsSeenSerializer(serializers.Serializer):
+    card_ids = serializers.ListField(
+        child=serializers.UUIDField(),
+        allow_empty=False,
+    )
