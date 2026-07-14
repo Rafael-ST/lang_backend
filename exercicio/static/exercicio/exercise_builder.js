@@ -262,12 +262,13 @@
 
   function updateTypeFields() {
     const type = elements.exerciseType.value;
-    toggle(".prompt-text-field", type !== "write_translation_from_audio");
-    toggle(".prompt-audio-field", ["just_audio", "write_translation_from_text_audio", "write_translation_from_audio"].includes(type));
-    toggle(".translation-field", type !== "speak_written_text");
+    const isMultipleChoice = ["multiple_choice_translation", "multiple_choice_audio_english"].includes(type);
+    toggle(".prompt-text-field", !["write_translation_from_audio", "multiple_choice_audio_english"].includes(type));
+    toggle(".prompt-audio-field", ["just_audio", "multiple_choice_audio_english", "write_translation_from_text_audio", "write_translation_from_audio"].includes(type));
+    toggle(".translation-field", !["speak_written_text", "multiple_choice_audio_english"].includes(type));
     toggle(".expected-field", type === "speak_written_text");
     toggle(".accept-field", type.includes("write_translation"));
-    elements.optionsSection.classList.toggle("d-none", type !== "multiple_choice_translation");
+    elements.optionsSection.classList.toggle("d-none", !isMultipleChoice);
     updatePreview();
   }
 
@@ -291,21 +292,26 @@
     elements.translation.value = card.international_name || "";
     elements.expectedTranscript.value = card.english_name || "";
 
-    if (elements.exerciseType.value === "multiple_choice_translation") {
-      hydrateOptions(card);
+    if (["multiple_choice_translation", "multiple_choice_audio_english"].includes(elements.exerciseType.value)) {
+      hydrateOptions(card, elements.exerciseType.value === "multiple_choice_audio_english");
     }
 
     updatePreview();
   }
 
-  function hydrateOptions(card) {
+  function hydrateOptions(card, useEnglish = false) {
     elements.optionsList.innerHTML = "";
-    addOptionRow(card.id, card.international_name || card.english_name || "");
+    addOptionRow(card.id, useEnglish ? card.english_name || "" : card.international_name || card.english_name || "");
 
     state.cards
       .filter((item) => item.id !== card.id)
       .slice(0, 3)
-      .forEach((item) => addOptionRow(item.id, item.international_name || item.english_name || ""));
+      .forEach((item) =>
+        addOptionRow(
+          item.id,
+          useEnglish ? item.english_name || "" : item.international_name || item.english_name || ""
+        )
+      );
   }
 
   function addDefaultOptionRows() {
@@ -339,11 +345,11 @@
     const prompt = {};
     const answerConfig = {};
 
-    if (type !== "write_translation_from_audio" && elements.promptText.value.trim()) {
+    if (!["write_translation_from_audio", "multiple_choice_audio_english"].includes(type) && elements.promptText.value.trim()) {
       prompt.text = elements.promptText.value.trim();
     }
 
-    if (["just_audio", "write_translation_from_text_audio", "write_translation_from_audio"].includes(type)) {
+    if (["just_audio", "multiple_choice_audio_english", "write_translation_from_text_audio", "write_translation_from_audio"].includes(type)) {
       const audioUrl = audioUrlOverride || getCurrentAudioUrl();
       if (audioUrl) {
         prompt.audio_url = audioUrl;
@@ -357,6 +363,11 @@
     if (type === "multiple_choice_translation") {
       answerConfig.correct_card_id = elements.card.value;
       answerConfig.correct_text = elements.translation.value.trim();
+    }
+
+    if (type === "multiple_choice_audio_english") {
+      answerConfig.correct_card_id = elements.card.value;
+      answerConfig.correct_text = card?.english_name || "";
     }
 
     if (type.includes("write_translation")) {
@@ -383,7 +394,7 @@
       card: elements.card.value,
       type,
       prompt,
-      options: type === "multiple_choice_translation" ? getOptions() : [],
+      options: ["multiple_choice_translation", "multiple_choice_audio_english"].includes(type) ? getOptions() : [],
       answer_config: answerConfig,
       is_active: elements.isActive.checked,
       difficulty: Number(elements.difficulty.value || 1),

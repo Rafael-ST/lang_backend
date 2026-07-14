@@ -83,7 +83,8 @@ class ExerciseSetProgressSerializer(serializers.ModelSerializer):
             'exercise_set_detail',
             'status',
             'completed_at',
+            'duration_ms',
             'created_at',
             'updated_at',
         ]
-        read_only_fields = ['id', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'duration_ms', 'created_at', 'updated_at']

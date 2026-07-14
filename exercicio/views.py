@@ -60,6 +60,15 @@ class ExerciseViewSet(viewsets.ModelViewSet):
         else:
             review = bool(review)
 
+        duration_ms = request.data.get('duration_ms')
+        try:
+            duration_ms = max(0, int(duration_ms)) if duration_ms is not None else None
+        except (TypeError, ValueError):
+            return Response(
+                {'duration_ms': 'Informe uma duracao valida em milissegundos.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
         if review:
             return Response(
                 {
@@ -103,13 +112,16 @@ class ExerciseViewSet(viewsets.ModelViewSet):
                 defaults={
                     'status': progress_status,
                     'completed_at': completed_at,
+                    'duration_ms': duration_ms if completed_at else None,
                 },
             )
 
             if progress.status != ExerciseSetProgress.Status.COMPLETED:
                 progress.status = progress_status
                 progress.completed_at = completed_at
-                progress.save(update_fields=['status', 'completed_at', 'updated_at'])
+                if completed_at:
+                    progress.duration_ms = duration_ms
+                progress.save(update_fields=['status', 'completed_at', 'duration_ms', 'updated_at'])
 
         return Response(
             {
@@ -119,6 +131,7 @@ class ExerciseViewSet(viewsets.ModelViewSet):
                 'completed_count': completed_count,
                 'total_count': total_count,
                 'completed_at': completed_at,
+                'duration_ms': progress.duration_ms,
             },
             status=status.HTTP_200_OK,
         )

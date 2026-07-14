@@ -9,6 +9,7 @@ from ExerciseSet.models import ExerciseSet
 class Exercise(models.Model):
     class ExerciseType(models.TextChoices):
         MULTIPLE_CHOICE_TRANSLATION = "multiple_choice_translation", "Multipla escolha"
+        MULTIPLE_CHOICE_AUDIO_ENGLISH = "multiple_choice_audio_english", "Multipla escolha com audio em ingles"
         WRITE_FROM_TEXT_AUDIO = "write_translation_from_text_audio", "Escrever com texto e audio"
         WRITE_FROM_AUDIO = "write_translation_from_audio", "Escrever ouvindo audio"
         SPEAK_WRITTEN_TEXT = "speak_written_text", "Falar texto escrito"

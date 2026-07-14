@@ -48,6 +48,7 @@ class ExerciseSetProgress(BaseModel):
         default=Status.NOT_STARTED,
     )
     completed_at = models.DateTimeField(null=True, blank=True)
+    duration_ms = models.PositiveBigIntegerField(null=True, blank=True)
 
     class Meta:
         unique_together = ["user", "exercise_set"]
