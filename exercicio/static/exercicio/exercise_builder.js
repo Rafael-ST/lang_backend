@@ -116,6 +116,7 @@
       state.cards = normalizeList(cards);
       renderExerciseSets();
       renderCards();
+      refreshOptionCardSelects();
       setConnectionStatus("Conectado", "success");
     } catch (error) {
       setConnectionStatus("Erro", "danger");
@@ -293,25 +294,20 @@
     elements.expectedTranscript.value = card.english_name || "";
 
     if (["multiple_choice_translation", "multiple_choice_audio_english"].includes(elements.exerciseType.value)) {
-      hydrateOptions(card, elements.exerciseType.value === "multiple_choice_audio_english");
+      hydrateOptions(card);
     }
 
     updatePreview();
   }
 
-  function hydrateOptions(card, useEnglish = false) {
+  function hydrateOptions(card) {
     elements.optionsList.innerHTML = "";
-    addOptionRow(card.id, useEnglish ? card.english_name || "" : card.international_name || card.english_name || "");
+    addOptionRow(card.id);
 
     state.cards
       .filter((item) => item.id !== card.id)
       .slice(0, 3)
-      .forEach((item) =>
-        addOptionRow(
-          item.id,
-          useEnglish ? item.english_name || "" : item.international_name || item.english_name || ""
-        )
-      );
+      .forEach((item) => addOptionRow(item.id));
   }
 
   function addDefaultOptionRows() {
@@ -320,12 +316,13 @@
     }
   }
 
-  function addOptionRow(id = "", text = "") {
+  function addOptionRow(id = "") {
     const row = document.createElement("div");
     row.className = "option-row";
     row.innerHTML = `
-      <input class="form-control option-id" type="text" placeholder="ID do card" value="${escapeAttribute(id)}" />
-      <input class="form-control option-text" type="text" placeholder="Texto da alternativa" value="${escapeAttribute(text)}" />
+      <select class="form-select option-card" aria-label="Card da alternativa">
+        ${buildOptionCardChoices(id)}
+      </select>
       <button class="btn btn-outline-danger" type="button" title="Remover alternativa">
         <i class="bi bi-trash"></i>
       </button>
@@ -334,8 +331,32 @@
       row.remove();
       updatePreview();
     });
-    row.querySelectorAll("input").forEach((input) => input.addEventListener("input", updatePreview));
+    row.querySelector("select").addEventListener("change", updatePreview);
     elements.optionsList.appendChild(row);
+    updatePreview();
+  }
+
+  function buildOptionCardChoices(selectedId = "") {
+    return [
+      '<option value="">Selecione um card...</option>',
+      ...state.cards
+        .filter((card) => card.is_active !== false)
+        .map((card) => {
+          const isSelected = String(card.id) === String(selectedId) ? " selected" : "";
+          const label = [card.english_name, card.international_name]
+            .filter(Boolean)
+            .join(" - ");
+          return `<option value="${escapeAttribute(card.id)}"${isSelected}>${escapeHtml(label || card.id)}</option>`;
+        }),
+    ].join("");
+  }
+
+  function refreshOptionCardSelects() {
+    elements.optionsList.querySelectorAll(".option-card").forEach((select) => {
+      const selectedId = select.value;
+      select.innerHTML = buildOptionCardChoices(selectedId);
+      select.value = selectedId;
+    });
     updatePreview();
   }
 
@@ -459,12 +480,21 @@
   }
 
   function getOptions() {
+    const useEnglish = elements.exerciseType.value === "multiple_choice_audio_english";
+
     return Array.from(elements.optionsList.querySelectorAll(".option-row"))
-      .map((row) => ({
-        id: row.querySelector(".option-id").value.trim(),
-        text: row.querySelector(".option-text").value.trim(),
-      }))
-      .filter((option) => option.id || option.text);
+      .map((row) => {
+        const id = row.querySelector(".option-card").value;
+        const card = state.cards.find((item) => String(item.id) === String(id));
+
+        return {
+          id,
+          text: useEnglish
+            ? card?.english_name || ""
+            : card?.international_name || card?.english_name || "",
+        };
+      })
+      .filter((option) => option.id);
   }
 
   function getSelectedCard() {
