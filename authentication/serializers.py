@@ -26,6 +26,10 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         return data
 
 
+class GoogleAuthSerializer(serializers.Serializer):
+    id_token = serializers.CharField(trim_whitespace=True)
+
+
 class UserSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, required=False, validators=[validate_password])
 

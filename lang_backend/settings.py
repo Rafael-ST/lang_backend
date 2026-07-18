@@ -32,6 +32,12 @@ DEBUG = os.getenv('DEBUG', 'False').lower() in ('true', '1', 't')
 
 ALLOWED_HOSTS = ["*"]
 
+GOOGLE_OAUTH_CLIENT_IDS = [
+    client_id.strip()
+    for client_id in os.getenv('GOOGLE_OAUTH_CLIENT_IDS', '').split(',')
+    if client_id.strip()
+]
+
 
 # Application definition
 
