@@ -10,7 +10,7 @@ class ExerciseAdmin(admin.ModelAdmin):
     search_fields = ('card__english_name', 'card__international_name', 'exercise_set__title', 'type')
     ordering = ('order', 'id')
     readonly_fields = ('id', 'created_at', 'updated_at')
-    autocomplete_fields = ('exercise_set', 'card')
+    autocomplete_fields = ('exercise_set', 'card', 'pair_cards')
 
 
 @admin.register(ExerciseAttempt)

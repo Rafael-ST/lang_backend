@@ -14,6 +14,7 @@ class Exercise(models.Model):
         WRITE_FROM_AUDIO = "write_translation_from_audio", "Escrever ouvindo audio"
         SPEAK_WRITTEN_TEXT = "speak_written_text", "Falar texto escrito"
         JUST_AUDIO = "just_audio", "Apenas audio"
+        MATCHING_PAIRS = "matching_pairs", "Associar traducao e ingles"
 
     exercise_set = models.ForeignKey(
         ExerciseSet,
@@ -28,6 +29,13 @@ class Exercise(models.Model):
         "cards.Card",
         on_delete=models.CASCADE,
         related_name="exercises",
+    )
+
+    pair_cards = models.ManyToManyField(
+        "cards.Card",
+        blank=True,
+        related_name="matching_exercises",
+        verbose_name="Cards para associacao",
     )
 
     type = models.CharField(

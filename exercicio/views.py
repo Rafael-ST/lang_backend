@@ -24,7 +24,9 @@ class ExerciseViewSet(viewsets.ModelViewSet):
     ordering = ['order', 'id']
 
     def get_queryset(self):
-        queryset = Exercise.objects.select_related('card', 'exercise_set').all().order_by('order', 'id')
+        queryset = Exercise.objects.select_related(
+            'card', 'exercise_set'
+        ).prefetch_related('pair_cards').all().order_by('order', 'id')
         include_completed = self.request.query_params.get('include_completed')
         exercise_set = self.request.query_params.get('exercise_set') or self.request.query_params.get('exercise_set_id')
 

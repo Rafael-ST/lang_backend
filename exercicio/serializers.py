@@ -7,6 +7,7 @@ from exercicio.models import Exercise, ExerciseAttempt
 
 class ExerciseSerializer(serializers.ModelSerializer):
     card_detail = CardSerializer(source='card', read_only=True)
+    pair_card_details = CardSerializer(source='pair_cards', many=True, read_only=True)
     exercise_set_detail = ExerciseSetSerializer(source='exercise_set', read_only=True)
 
     class Meta:
@@ -17,6 +18,8 @@ class ExerciseSerializer(serializers.ModelSerializer):
             'exercise_set_detail',
             'card',
             'card_detail',
+            'pair_cards',
+            'pair_card_details',
             'type',
             'prompt',
             'options',
@@ -28,6 +31,41 @@ class ExerciseSerializer(serializers.ModelSerializer):
             'updated_at',
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
+
+    def validate(self, attrs):
+        exercise_type = attrs.get('type', getattr(self.instance, 'type', None))
+        pair_cards = attrs.get('pair_cards')
+
+        if exercise_type == Exercise.ExerciseType.MATCHING_PAIRS:
+            if pair_cards is None and self.instance:
+                pair_cards = self.instance.pair_cards.all()
+
+            if not pair_cards or len(pair_cards) < 2:
+                raise serializers.ValidationError({
+                    'pair_cards': 'Selecione pelo menos dois cards para a associacao.'
+                })
+
+            pair_card_ids = [card.pk for card in pair_cards]
+            if len(pair_card_ids) != len(set(pair_card_ids)):
+                raise serializers.ValidationError({
+                    'pair_cards': 'Nao selecione o mesmo card mais de uma vez.'
+                })
+
+            invalid_cards = [
+                card for card in pair_cards
+                if not card.is_active
+                or not card.english_name.strip()
+                or not card.international_name.strip()
+            ]
+            if invalid_cards:
+                raise serializers.ValidationError({
+                    'pair_cards': (
+                        'Todos os cards devem estar ativos e possuir nomes '
+                        'em ingles e traduzido.'
+                    )
+                })
+
+        return attrs
 
 
 class ExerciseAttemptSerializer(serializers.ModelSerializer):

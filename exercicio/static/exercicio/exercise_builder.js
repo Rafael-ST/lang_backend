@@ -34,6 +34,7 @@
     expectedTranscript: document.querySelector("#expectedTranscript"),
     acceptedAnswers: document.querySelector("#acceptedAnswers"),
     optionsSection: document.querySelector("#optionsSection"),
+    optionsTitle: document.querySelector("#optionsTitle"),
     optionsList: document.querySelector("#optionsList"),
     addOptionButton: document.querySelector("#addOptionButton"),
     jsonPreview: document.querySelector("#jsonPreview"),
@@ -264,12 +265,14 @@
   function updateTypeFields() {
     const type = elements.exerciseType.value;
     const isMultipleChoice = ["multiple_choice_translation", "multiple_choice_audio_english"].includes(type);
-    toggle(".prompt-text-field", !["write_translation_from_audio", "multiple_choice_audio_english"].includes(type));
+    const isMatchingPairs = type === "matching_pairs";
+    toggle(".prompt-text-field", !["write_translation_from_audio", "multiple_choice_audio_english", "matching_pairs"].includes(type));
     toggle(".prompt-audio-field", ["just_audio", "multiple_choice_audio_english", "write_translation_from_text_audio", "write_translation_from_audio"].includes(type));
-    toggle(".translation-field", !["speak_written_text", "multiple_choice_audio_english"].includes(type));
+    toggle(".translation-field", !["speak_written_text", "multiple_choice_audio_english", "matching_pairs"].includes(type));
     toggle(".expected-field", type === "speak_written_text");
     toggle(".accept-field", type.includes("write_translation"));
-    elements.optionsSection.classList.toggle("d-none", !isMultipleChoice);
+    elements.optionsSection.classList.toggle("d-none", !isMultipleChoice && !isMatchingPairs);
+    elements.optionsTitle.textContent = isMatchingPairs ? "Cards para associar" : "Alternativas";
     updatePreview();
   }
 
@@ -293,7 +296,7 @@
     elements.translation.value = card.international_name || "";
     elements.expectedTranscript.value = card.english_name || "";
 
-    if (["multiple_choice_translation", "multiple_choice_audio_english"].includes(elements.exerciseType.value)) {
+    if (["multiple_choice_translation", "multiple_choice_audio_english", "matching_pairs"].includes(elements.exerciseType.value)) {
       hydrateOptions(card);
     }
 
@@ -416,6 +419,7 @@
       type,
       prompt,
       options: ["multiple_choice_translation", "multiple_choice_audio_english"].includes(type) ? getOptions() : [],
+      pair_cards: type === "matching_pairs" ? getSelectedOptionCardIds() : [],
       answer_config: answerConfig,
       is_active: elements.isActive.checked,
       difficulty: Number(elements.difficulty.value || 1),
@@ -495,6 +499,16 @@
         };
       })
       .filter((option) => option.id);
+  }
+
+  function getSelectedOptionCardIds() {
+    return [
+      ...new Set(
+        Array.from(elements.optionsList.querySelectorAll(".option-card"))
+          .map((select) => select.value)
+          .filter(Boolean)
+      ),
+    ];
   }
 
   function getSelectedCard() {
