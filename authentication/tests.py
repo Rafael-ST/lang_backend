@@ -81,3 +81,50 @@ class GoogleAuthViewTests(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
         self.assertFalse(User.objects.exists())
+
+
+class CurrentUserViewTests(APITestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username='user@example.com',
+            email='user@example.com',
+            password='a-valid-test-password',
+        )
+        self.other_user = User.objects.create_user(
+            username='other@example.com',
+            email='other@example.com',
+            password='a-valid-test-password',
+        )
+        Perfil.objects.get_or_create(user=self.user)
+        Perfil.objects.get_or_create(user=self.other_user)
+
+    def test_authenticated_user_can_delete_own_account_and_profile(self):
+        self.client.force_authenticate(user=self.user)
+
+        response = self.client.delete(reverse('usuario-me'))
+
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(User.objects.filter(pk=self.user.pk).exists())
+        self.assertFalse(Perfil.objects.filter(user_id=self.user.pk).exists())
+        self.assertTrue(User.objects.filter(pk=self.other_user.pk).exists())
+
+    def test_unauthenticated_user_cannot_delete_account(self):
+        response = self.client.delete(reverse('usuario-me'))
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertTrue(User.objects.filter(pk=self.user.pk).exists())
+
+
+class CredentialLoginTests(APITestCase):
+    def test_returns_portuguese_message_when_account_does_not_exist(self):
+        response = self.client.post(
+            reverse('token_obtain_pair'),
+            {
+                'username': 'naoexiste@example.com',
+                'password': 'senha-invalida',
+            },
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(response.data['detail'], 'E-mail ou senha inválidos.')

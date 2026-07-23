@@ -10,6 +10,11 @@ User = get_user_model()
 
 
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
+    default_error_messages = {
+        **TokenObtainPairSerializer.default_error_messages,
+        'no_active_account': 'E-mail ou senha inválidos.',
+    }
+
     def validate(self, attrs):
         data = super().validate(attrs)
         user = self.user

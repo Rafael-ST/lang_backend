@@ -200,10 +200,22 @@ class UserViewSet(viewsets.ModelViewSet):
 
         return super().get_permissions()
 
-    @action(detail=False, methods=['get', 'patch'], url_path='me')
+    @action(detail=False, methods=['get', 'patch', 'delete'], url_path='me')
     def me(self, request):
         if request.method == 'GET':
             return Response(self.get_serializer(request.user).data)
+
+        if request.method == 'DELETE':
+            with transaction.atomic():
+                request.user.delete()
+
+            response = Response(status=status.HTTP_204_NO_CONTENT)
+            response.delete_cookie(
+                settings.JWT_REFRESH_COOKIE_NAME,
+                path='/',
+                samesite=settings.JWT_REFRESH_COOKIE_SAMESITE,
+            )
+            return response
 
         serializer = self.get_serializer(request.user, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
