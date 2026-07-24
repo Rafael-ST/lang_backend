@@ -1,8 +1,13 @@
+from io import BytesIO
+from pathlib import Path
+from tempfile import TemporaryDirectory
 from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import override_settings
 from django.urls import reverse
+from PIL import Image
 from rest_framework import status
 from rest_framework.test import APITestCase
 
@@ -85,6 +90,13 @@ class GoogleAuthViewTests(APITestCase):
 
 class CurrentUserViewTests(APITestCase):
     def setUp(self):
+        self.media_directory = TemporaryDirectory()
+        self.media_override = override_settings(
+            MEDIA_ROOT=self.media_directory.name,
+        )
+        self.media_override.enable()
+        self.addCleanup(self.media_override.disable)
+        self.addCleanup(self.media_directory.cleanup)
         self.user = User.objects.create_user(
             username='user@example.com',
             email='user@example.com',
@@ -97,6 +109,15 @@ class CurrentUserViewTests(APITestCase):
         )
         Perfil.objects.get_or_create(user=self.user)
         Perfil.objects.get_or_create(user=self.other_user)
+
+    def make_image_upload(self, size=(1400, 900), image_format='PNG'):
+        output = BytesIO()
+        Image.new('RGB', size, '#7a4b2e').save(output, format=image_format)
+        return SimpleUploadedFile(
+            f'profile.{image_format.lower()}',
+            output.getvalue(),
+            content_type=f'image/{image_format.lower()}',
+        )
 
     def test_authenticated_user_can_delete_own_account_and_profile(self):
         self.client.force_authenticate(user=self.user)
@@ -113,6 +134,79 @@ class CurrentUserViewTests(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
         self.assertTrue(User.objects.filter(pk=self.user.pk).exists())
+
+    def test_authenticated_user_can_upload_normalized_profile_picture(self):
+        self.client.force_authenticate(user=self.user)
+
+        response = self.client.post(
+            reverse('usuario-profile-picture'),
+            {'photo': self.make_image_upload()},
+            format='multipart',
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn('/media/profiles/', response.data['profile_picture_url'])
+        self.user.perfil.refresh_from_db()
+        picture_path = Path(self.user.perfil.profile_picture.path)
+        self.assertEqual(picture_path.suffix, '.jpg')
+        self.assertTrue(picture_path.exists())
+        with Image.open(picture_path) as image:
+            self.assertEqual(image.format, 'JPEG')
+            self.assertLessEqual(max(image.size), 1024)
+
+    def test_rejects_file_disguised_as_image(self):
+        self.client.force_authenticate(user=self.user)
+        fake_image = SimpleUploadedFile(
+            'profile.png',
+            b'this is not an image',
+            content_type='image/png',
+        )
+
+        response = self.client.post(
+            reverse('usuario-profile-picture'),
+            {'photo': fake_image},
+            format='multipart',
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.user.perfil.refresh_from_db()
+        self.assertFalse(self.user.perfil.profile_picture)
+
+    def test_rejects_profile_picture_larger_than_five_megabytes(self):
+        self.client.force_authenticate(user=self.user)
+        oversized_image = SimpleUploadedFile(
+            'profile.png',
+            b'0' * (5 * 1024 * 1024 + 1),
+            content_type='image/png',
+        )
+
+        response = self.client.post(
+            reverse('usuario-profile-picture'),
+            {'photo': oversized_image},
+            format='multipart',
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.user.perfil.refresh_from_db()
+        self.assertFalse(self.user.perfil.profile_picture)
+
+    def test_authenticated_user_can_remove_profile_picture(self):
+        self.client.force_authenticate(user=self.user)
+        upload_response = self.client.post(
+            reverse('usuario-profile-picture'),
+            {'photo': self.make_image_upload(size=(256, 256))},
+            format='multipart',
+        )
+        self.assertEqual(upload_response.status_code, status.HTTP_200_OK)
+        self.user.perfil.refresh_from_db()
+        picture_path = Path(self.user.perfil.profile_picture.path)
+
+        response = self.client.delete(reverse('usuario-profile-picture'))
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.user.perfil.refresh_from_db()
+        self.assertFalse(self.user.perfil.profile_picture)
+        self.assertFalse(picture_path.exists())
 
 
 class CredentialLoginTests(APITestCase):

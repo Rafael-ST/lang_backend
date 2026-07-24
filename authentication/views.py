@@ -4,12 +4,18 @@ from django.db import transaction
 from google.auth.transport.requests import Request as GoogleRequest
 from google.oauth2 import id_token as google_id_token
 from rest_framework import filters, permissions, status, viewsets
+from rest_framework.parsers import MultiPartParser
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.decorators import action
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
-from authentication.serializers import CustomTokenObtainPairSerializer, GoogleAuthSerializer, UserSerializer
+from authentication.serializers import (
+    CustomTokenObtainPairSerializer,
+    GoogleAuthSerializer,
+    ProfilePictureUploadSerializer,
+    UserSerializer,
+)
 from perfil.models import DEFAULT_PROFILE_POINTS, Perfil
 
 
@@ -195,7 +201,7 @@ class UserViewSet(viewsets.ModelViewSet):
         if self.action == 'create':
             return [permissions.AllowAny()]
 
-        if self.action == 'me':
+        if self.action in ('me', 'profile_picture'):
             return [permissions.IsAuthenticated()]
 
         return super().get_permissions()
@@ -221,3 +227,45 @@ class UserViewSet(viewsets.ModelViewSet):
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response(serializer.data)
+
+    @action(
+        detail=False,
+        methods=['post', 'delete'],
+        url_path='me/photo',
+        parser_classes=[MultiPartParser],
+    )
+    def profile_picture(self, request):
+        profile, _ = Perfil.objects.get_or_create(
+            user=request.user,
+            defaults={'pontos': DEFAULT_PROFILE_POINTS},
+        )
+
+        if request.method == 'DELETE':
+            old_picture = profile.profile_picture
+            profile.profile_picture = None
+            profile.save(update_fields=['profile_picture', 'updated_at'])
+            if old_picture:
+                old_picture.delete(save=False)
+            user_data = self.get_serializer(request.user).data
+            user_data['profile_picture_url'] = None
+            return Response(
+                user_data,
+                status=status.HTTP_200_OK,
+            )
+
+        upload_serializer = ProfilePictureUploadSerializer(data=request.data)
+        upload_serializer.is_valid(raise_exception=True)
+        old_picture = profile.profile_picture
+        profile.profile_picture = upload_serializer.validated_data['photo']
+        profile.save(update_fields=['profile_picture', 'updated_at'])
+        if old_picture and old_picture.name != profile.profile_picture.name:
+            old_picture.delete(save=False)
+
+        user_data = self.get_serializer(request.user).data
+        user_data['profile_picture_url'] = request.build_absolute_uri(
+            profile.profile_picture.url
+        )
+        return Response(
+            user_data,
+            status=status.HTTP_200_OK,
+        )
