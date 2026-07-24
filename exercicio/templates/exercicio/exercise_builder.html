@@ -105,6 +105,7 @@
                   <option value="write_translation_from_audio">Escrever ouvindo audio</option>
                   <option value="speak_written_text">Falar texto escrito</option>
                   <option value="matching_pairs">Associar traducao e ingles</option>
+                  <option value="complete_audio_text">Completar texto ouvindo audio</option>
                 </select>
               </div>
 
@@ -149,6 +150,15 @@
               <div class="col-12 accept-field">
                 <label class="form-label" for="acceptedAnswers">Respostas aceitas</label>
                 <input id="acceptedAnswers" class="form-control" type="text" placeholder="Separe alternativas por virgula" />
+              </div>
+              <div class="col-12 col-md-8 cloze-field d-none">
+                <label class="form-label" for="clozeTemplate">Texto com lacuna</label>
+                <input id="clozeTemplate" class="form-control" type="text" placeholder="Ex.: How __ you?" />
+                <div class="form-text">Use dois sublinhados (__), uma unica vez, no trecho que o aluno deve completar.</div>
+              </div>
+              <div class="col-12 col-md-4 cloze-field d-none">
+                <label class="form-label" for="clozeAnswer">Resposta da lacuna</label>
+                <input id="clozeAnswer" class="form-control" type="text" placeholder="Ex.: are" />
               </div>
             </div>
 

@@ -65,6 +65,40 @@ class ExerciseSerializer(serializers.ModelSerializer):
                     )
                 })
 
+        if exercise_type == Exercise.ExerciseType.COMPLETE_AUDIO_TEXT:
+            prompt = attrs.get('prompt', getattr(self.instance, 'prompt', {}))
+            answer_config = attrs.get(
+                'answer_config',
+                getattr(self.instance, 'answer_config', {}),
+            )
+            card = attrs.get('card', getattr(self.instance, 'card', None))
+            template = prompt.get('text', '') if isinstance(prompt, dict) else ''
+            correct_text = (
+                answer_config.get('correct_text', '')
+                if isinstance(answer_config, dict)
+                else ''
+            )
+            audio_url = (
+                prompt.get('audio_url')
+                if isinstance(prompt, dict)
+                else None
+            )
+
+            if template.count('__') != 1:
+                raise serializers.ValidationError({
+                    'prompt': (
+                        'O texto deve conter exatamente uma lacuna representada por __.'
+                    )
+                })
+            if not str(correct_text).strip():
+                raise serializers.ValidationError({
+                    'answer_config': 'Informe o texto correto da lacuna.'
+                })
+            if not audio_url and not getattr(card, 'audio', None):
+                raise serializers.ValidationError({
+                    'card': 'O card selecionado deve possuir audio.'
+                })
+
         return attrs
 
 

@@ -15,6 +15,7 @@ class Exercise(models.Model):
         SPEAK_WRITTEN_TEXT = "speak_written_text", "Falar texto escrito"
         JUST_AUDIO = "just_audio", "Apenas audio"
         MATCHING_PAIRS = "matching_pairs", "Associar traducao e ingles"
+        COMPLETE_AUDIO_TEXT = "complete_audio_text", "Completar texto ouvindo audio"
 
     exercise_set = models.ForeignKey(
         ExerciseSet,

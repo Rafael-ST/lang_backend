@@ -33,6 +33,8 @@
     translation: document.querySelector("#translation"),
     expectedTranscript: document.querySelector("#expectedTranscript"),
     acceptedAnswers: document.querySelector("#acceptedAnswers"),
+    clozeTemplate: document.querySelector("#clozeTemplate"),
+    clozeAnswer: document.querySelector("#clozeAnswer"),
     optionsSection: document.querySelector("#optionsSection"),
     optionsTitle: document.querySelector("#optionsTitle"),
     optionsList: document.querySelector("#optionsList"),
@@ -266,11 +268,13 @@
     const type = elements.exerciseType.value;
     const isMultipleChoice = ["multiple_choice_translation", "multiple_choice_audio_english"].includes(type);
     const isMatchingPairs = type === "matching_pairs";
-    toggle(".prompt-text-field", !["write_translation_from_audio", "multiple_choice_audio_english", "matching_pairs"].includes(type));
-    toggle(".prompt-audio-field", ["just_audio", "multiple_choice_audio_english", "write_translation_from_text_audio", "write_translation_from_audio"].includes(type));
-    toggle(".translation-field", !["speak_written_text", "multiple_choice_audio_english", "matching_pairs"].includes(type));
+    const isCompleteAudioText = type === "complete_audio_text";
+    toggle(".prompt-text-field", !["write_translation_from_audio", "multiple_choice_audio_english", "matching_pairs", "complete_audio_text"].includes(type));
+    toggle(".prompt-audio-field", ["just_audio", "multiple_choice_audio_english", "write_translation_from_text_audio", "write_translation_from_audio", "complete_audio_text"].includes(type));
+    toggle(".translation-field", !["speak_written_text", "multiple_choice_audio_english", "matching_pairs", "complete_audio_text"].includes(type));
     toggle(".expected-field", type === "speak_written_text");
     toggle(".accept-field", type.includes("write_translation"));
+    toggle(".cloze-field", isCompleteAudioText);
     elements.optionsSection.classList.toggle("d-none", !isMultipleChoice && !isMatchingPairs);
     elements.optionsTitle.textContent = isMatchingPairs ? "Cards para associar" : "Alternativas";
     updatePreview();
@@ -295,6 +299,8 @@
     renderCurrentAudio(card.audio_url || card.audio || "");
     elements.translation.value = card.international_name || "";
     elements.expectedTranscript.value = card.english_name || "";
+    elements.clozeTemplate.value = card.english_name || "";
+    elements.clozeAnswer.value = "";
 
     if (["multiple_choice_translation", "multiple_choice_audio_english", "matching_pairs"].includes(elements.exerciseType.value)) {
       hydrateOptions(card);
@@ -369,11 +375,11 @@
     const prompt = {};
     const answerConfig = {};
 
-    if (!["write_translation_from_audio", "multiple_choice_audio_english"].includes(type) && elements.promptText.value.trim()) {
+    if (!["write_translation_from_audio", "multiple_choice_audio_english", "complete_audio_text"].includes(type) && elements.promptText.value.trim()) {
       prompt.text = elements.promptText.value.trim();
     }
 
-    if (["just_audio", "multiple_choice_audio_english", "write_translation_from_text_audio", "write_translation_from_audio"].includes(type)) {
+    if (["just_audio", "multiple_choice_audio_english", "write_translation_from_text_audio", "write_translation_from_audio", "complete_audio_text"].includes(type)) {
       const audioUrl = audioUrlOverride || getCurrentAudioUrl();
       if (audioUrl) {
         prompt.audio_url = audioUrl;
@@ -411,6 +417,13 @@
     if (type === "speak_written_text") {
       answerConfig.expected_transcript = elements.expectedTranscript.value.trim();
       answerConfig.language = "en-US";
+    }
+
+    if (type === "complete_audio_text") {
+      prompt.text = elements.clozeTemplate.value.trim();
+      answerConfig.correct_text = elements.clozeAnswer.value.trim();
+      answerConfig.case_sensitive = false;
+      answerConfig.trim = true;
     }
 
     return {
