@@ -12,6 +12,8 @@ class PerfilSerializer(serializers.ModelSerializer):
     user = serializers.PrimaryKeyRelatedField(queryset=User.objects.all(), required=False)
     username = serializers.CharField(source='user.username', read_only=True)
     average_exercise_set_time_ms = serializers.SerializerMethodField()
+    learned_words_count = serializers.SerializerMethodField()
+    completed_exercises_count = serializers.SerializerMethodField()
 
     class Meta:
         model = Perfil
@@ -21,11 +23,21 @@ class PerfilSerializer(serializers.ModelSerializer):
             'username',
             'pontos',
             'average_exercise_set_time_ms',
+            'learned_words_count',
+            'completed_exercises_count',
             'is_active',
             'created_at',
             'updated_at',
         ]
-        read_only_fields = ['id', 'username', 'average_exercise_set_time_ms', 'created_at', 'updated_at']
+        read_only_fields = [
+            'id',
+            'username',
+            'average_exercise_set_time_ms',
+            'learned_words_count',
+            'completed_exercises_count',
+            'created_at',
+            'updated_at',
+        ]
 
     def get_average_exercise_set_time_ms(self, obj):
         average = obj.user.exercisesetprogress_set.filter(
@@ -34,6 +46,14 @@ class PerfilSerializer(serializers.ModelSerializer):
         ).aggregate(value=Avg('duration_ms'))['value']
 
         return round(average) if average is not None else None
+
+    def get_learned_words_count(self, obj):
+        return obj.user.card_accesses.count()
+
+    def get_completed_exercises_count(self, obj):
+        return obj.user.exerciseattempt_set.filter(
+            is_correct=True,
+        ).values('exercise_id').distinct().count()
 
     def validate_user(self, user):
         request = self.context.get('request')
