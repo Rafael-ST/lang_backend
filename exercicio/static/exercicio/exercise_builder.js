@@ -269,13 +269,13 @@
 
   function updateTypeFields() {
     const type = elements.exerciseType.value;
-    const isMultipleChoice = ["multiple_choice_translation", "multiple_choice_audio_english"].includes(type);
+    const isMultipleChoice = ["multiple_choice_translation", "multiple_choice_audio_english", "image_multiple_choice_english"].includes(type);
     const isMatchingPairs = type === "matching_pairs";
     const isCompleteAudioText = type === "complete_audio_text";
-    toggle(".prompt-text-field", !["write_translation_from_audio", "multiple_choice_audio_english", "matching_pairs", "complete_audio_text", "image_presentation"].includes(type));
+    toggle(".prompt-text-field", !["write_translation_from_audio", "multiple_choice_audio_english", "matching_pairs", "complete_audio_text", "image_presentation", "image_multiple_choice_english"].includes(type));
     toggle(".prompt-audio-field", ["just_audio", "multiple_choice_audio_english", "write_translation_from_text_audio", "write_translation_from_audio", "complete_audio_text", "image_presentation"].includes(type));
-    toggle(".prompt-image-field", type === "image_presentation");
-    toggle(".translation-field", !["speak_written_text", "multiple_choice_audio_english", "matching_pairs", "complete_audio_text"].includes(type));
+    toggle(".prompt-image-field", ["image_presentation", "image_multiple_choice_english"].includes(type));
+    toggle(".translation-field", !["speak_written_text", "multiple_choice_audio_english", "matching_pairs", "complete_audio_text", "image_multiple_choice_english"].includes(type));
     toggle(".expected-field", type === "speak_written_text");
     toggle(".accept-field", type.includes("write_translation"));
     toggle(".cloze-field", isCompleteAudioText);
@@ -308,7 +308,7 @@
     elements.clozeTemplate.value = card.english_name || "";
     elements.clozeAnswer.value = "";
 
-    if (["multiple_choice_translation", "multiple_choice_audio_english", "matching_pairs"].includes(elements.exerciseType.value)) {
+    if (["multiple_choice_translation", "multiple_choice_audio_english", "image_multiple_choice_english", "matching_pairs"].includes(elements.exerciseType.value)) {
       hydrateOptions(card);
     }
 
@@ -381,7 +381,7 @@
     const prompt = {};
     const answerConfig = {};
 
-    if (!["write_translation_from_audio", "multiple_choice_audio_english", "complete_audio_text"].includes(type) && elements.promptText.value.trim()) {
+    if (!["write_translation_from_audio", "multiple_choice_audio_english", "complete_audio_text", "image_multiple_choice_english"].includes(type) && elements.promptText.value.trim()) {
       prompt.text = elements.promptText.value.trim();
     }
 
@@ -402,6 +402,11 @@
     }
 
     if (type === "multiple_choice_audio_english") {
+      answerConfig.correct_card_id = elements.card.value;
+      answerConfig.correct_text = card?.english_name || "";
+    }
+
+    if (type === "image_multiple_choice_english") {
       answerConfig.correct_card_id = elements.card.value;
       answerConfig.correct_text = card?.english_name || "";
     }
@@ -437,7 +442,7 @@
       card: elements.card.value,
       type,
       prompt,
-      options: ["multiple_choice_translation", "multiple_choice_audio_english"].includes(type) ? getOptions() : [],
+      options: ["multiple_choice_translation", "multiple_choice_audio_english", "image_multiple_choice_english"].includes(type) ? getOptions() : [],
       pair_cards: type === "matching_pairs" ? getSelectedOptionCardIds() : [],
       answer_config: answerConfig,
       is_active: elements.isActive.checked,
@@ -533,7 +538,10 @@
   }
 
   function getOptions() {
-    const useEnglish = elements.exerciseType.value === "multiple_choice_audio_english";
+    const useEnglish = [
+      "multiple_choice_audio_english",
+      "image_multiple_choice_english",
+    ].includes(elements.exerciseType.value);
 
     return Array.from(elements.optionsList.querySelectorAll(".option-row"))
       .map((row) => {
@@ -545,6 +553,7 @@
           text: useEnglish
             ? card?.english_name || ""
             : card?.international_name || card?.english_name || "",
+          audio_url: card?.audio_url || card?.audio || "",
         };
       })
       .filter((option) => option.id);

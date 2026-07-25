@@ -1,5 +1,6 @@
 from rest_framework import serializers
 
+from cards.models import Card
 from cards.serializers import CardSerializer
 from ExerciseSet.serializers import ExerciseSetSerializer
 from exercicio.models import Exercise, ExerciseAttempt
@@ -112,6 +113,48 @@ class ExerciseSerializer(serializers.ModelSerializer):
             if not str(getattr(card, 'international_name', '')).strip():
                 raise serializers.ValidationError({
                     'card': 'O card selecionado deve possuir traducao.'
+                })
+
+        if exercise_type == Exercise.ExerciseType.IMAGE_MULTIPLE_CHOICE_ENGLISH:
+            card = attrs.get('card', getattr(self.instance, 'card', None))
+            options = attrs.get('options', getattr(self.instance, 'options', []))
+            option_ids = [
+                str(option.get('id'))
+                for option in options
+                if isinstance(option, dict) and option.get('id')
+            ]
+
+            if not getattr(card, 'image', None):
+                raise serializers.ValidationError({
+                    'card': 'O card correto deve possuir uma imagem.'
+                })
+            if len(option_ids) != 4 or len(set(option_ids)) != 4:
+                raise serializers.ValidationError({
+                    'options': 'Selecione exatamente quatro cards diferentes.'
+                })
+            if str(card.pk) not in option_ids:
+                raise serializers.ValidationError({
+                    'options': 'As alternativas devem incluir o card correto.'
+                })
+
+            option_cards = Card.objects.filter(id__in=option_ids)
+            if option_cards.count() != 4:
+                raise serializers.ValidationError({
+                    'options': 'Uma ou mais alternativas nao existem.'
+                })
+            invalid_options = [
+                option_card
+                for option_card in option_cards
+                if not option_card.is_active
+                or not option_card.english_name.strip()
+                or not option_card.audio
+            ]
+            if invalid_options:
+                raise serializers.ValidationError({
+                    'options': (
+                        'Todas as alternativas devem estar ativas e possuir '
+                        'nome em ingles e audio.'
+                    )
                 })
 
         return attrs

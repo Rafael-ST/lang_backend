@@ -17,6 +17,10 @@ class Exercise(models.Model):
         MATCHING_PAIRS = "matching_pairs", "Associar traducao e ingles"
         COMPLETE_AUDIO_TEXT = "complete_audio_text", "Completar texto ouvindo audio"
         IMAGE_PRESENTATION = "image_presentation", "Apresentacao com imagem"
+        IMAGE_MULTIPLE_CHOICE_ENGLISH = (
+            "image_multiple_choice_english",
+            "Multipla escolha em ingles com imagem",
+        )
 
     exercise_set = models.ForeignKey(
         ExerciseSet,

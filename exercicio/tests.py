@@ -82,3 +82,49 @@ class CompleteAudioTextSerializerTests(TestCase):
 
         self.assertFalse(serializer.is_valid())
         self.assertIn('card', serializer.errors)
+
+    def test_accepts_image_multiple_choice_with_four_audio_cards(self):
+        self.card.image = 'cards/images/how-are-you.jpg'
+        self.card.save(update_fields=['image'])
+        options = [self.card]
+        for index in range(3):
+            options.append(
+                Card.objects.create(
+                    english_name=f'Option {index}',
+                    international_name=f'Opcao {index}',
+                    categoria=self.card.categoria,
+                    audio=f'cards/audios/option-{index}.mp3',
+                )
+            )
+        payload = self.build_payload()
+        payload.update({
+            'type': Exercise.ExerciseType.IMAGE_MULTIPLE_CHOICE_ENGLISH,
+            'prompt': {},
+            'options': [
+                {'id': str(option.id), 'text': option.english_name}
+                for option in options
+            ],
+            'answer_config': {
+                'correct_card_id': str(self.card.id),
+                'correct_text': self.card.english_name,
+            },
+        })
+        serializer = ExerciseSerializer(data=payload)
+
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+
+    def test_rejects_image_multiple_choice_without_four_options(self):
+        self.card.image = 'cards/images/how-are-you.jpg'
+        self.card.save(update_fields=['image'])
+        payload = self.build_payload()
+        payload.update({
+            'type': Exercise.ExerciseType.IMAGE_MULTIPLE_CHOICE_ENGLISH,
+            'prompt': {},
+            'options': [
+                {'id': str(self.card.id), 'text': self.card.english_name},
+            ],
+        })
+        serializer = ExerciseSerializer(data=payload)
+
+        self.assertFalse(serializer.is_valid())
+        self.assertIn('options', serializer.errors)
