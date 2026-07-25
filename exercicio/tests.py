@@ -128,3 +128,68 @@ class CompleteAudioTextSerializerTests(TestCase):
 
         self.assertFalse(serializer.is_valid())
         self.assertIn('options', serializer.errors)
+
+    def test_accepts_audio_multiple_choice_with_four_image_cards(self):
+        self.card.image = 'cards/images/how-are-you.jpg'
+        self.card.save(update_fields=['image'])
+        options = [self.card]
+        for index in range(3):
+            options.append(
+                Card.objects.create(
+                    english_name=f'Image option {index}',
+                    international_name=f'Opcao visual {index}',
+                    categoria=self.card.categoria,
+                    image=f'cards/images/option-{index}.jpg',
+                )
+            )
+        payload = self.build_payload()
+        payload.update({
+            'type': Exercise.ExerciseType.AUDIO_MULTIPLE_CHOICE_IMAGES,
+            'prompt': {},
+            'options': [
+                {
+                    'id': str(option.id),
+                    'text': option.english_name,
+                    'image_url': option.image.name,
+                }
+                for option in options
+            ],
+            'answer_config': {
+                'correct_card_id': str(self.card.id),
+            },
+        })
+        serializer = ExerciseSerializer(data=payload)
+
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+
+    def test_rejects_audio_multiple_choice_when_an_option_has_no_image(self):
+        self.card.image = 'cards/images/how-are-you.jpg'
+        self.card.save(update_fields=['image'])
+        option_without_image = Card.objects.create(
+            english_name='No image',
+            international_name='Sem imagem',
+            categoria=self.card.categoria,
+        )
+        other_options = [
+            Card.objects.create(
+                english_name=f'Visual {index}',
+                international_name=f'Visual {index}',
+                categoria=self.card.categoria,
+                image=f'cards/images/visual-{index}.jpg',
+            )
+            for index in range(2)
+        ]
+        options = [self.card, option_without_image, *other_options]
+        payload = self.build_payload()
+        payload.update({
+            'type': Exercise.ExerciseType.AUDIO_MULTIPLE_CHOICE_IMAGES,
+            'prompt': {},
+            'options': [
+                {'id': str(option.id), 'text': option.english_name}
+                for option in options
+            ],
+        })
+        serializer = ExerciseSerializer(data=payload)
+
+        self.assertFalse(serializer.is_valid())
+        self.assertIn('options', serializer.errors)

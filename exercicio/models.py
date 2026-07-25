@@ -21,6 +21,10 @@ class Exercise(models.Model):
             "image_multiple_choice_english",
             "Multipla escolha em ingles com imagem",
         )
+        AUDIO_MULTIPLE_CHOICE_IMAGES = (
+            "audio_multiple_choice_images",
+            "Multipla escolha de imagens com audio",
+        )
 
     exercise_set = models.ForeignKey(
         ExerciseSet,

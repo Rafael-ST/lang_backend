@@ -157,6 +157,47 @@ class ExerciseSerializer(serializers.ModelSerializer):
                     )
                 })
 
+        if exercise_type == Exercise.ExerciseType.AUDIO_MULTIPLE_CHOICE_IMAGES:
+            card = attrs.get('card', getattr(self.instance, 'card', None))
+            options = attrs.get('options', getattr(self.instance, 'options', []))
+            option_ids = [
+                str(option.get('id'))
+                for option in options
+                if isinstance(option, dict) and option.get('id')
+            ]
+
+            if not getattr(card, 'audio', None):
+                raise serializers.ValidationError({
+                    'card': 'O card correto deve possuir audio.'
+                })
+            if not str(getattr(card, 'english_name', '')).strip():
+                raise serializers.ValidationError({
+                    'card': 'O card correto deve possuir nome em ingles.'
+                })
+            if len(option_ids) != 4 or len(set(option_ids)) != 4:
+                raise serializers.ValidationError({
+                    'options': 'Selecione exatamente quatro cards diferentes.'
+                })
+            if str(card.pk) not in option_ids:
+                raise serializers.ValidationError({
+                    'options': 'As alternativas devem incluir o card correto.'
+                })
+
+            option_cards = Card.objects.filter(id__in=option_ids)
+            if option_cards.count() != 4:
+                raise serializers.ValidationError({
+                    'options': 'Uma ou mais alternativas nao existem.'
+                })
+            if any(
+                not option_card.is_active or not option_card.image
+                for option_card in option_cards
+            ):
+                raise serializers.ValidationError({
+                    'options': (
+                        'Todas as alternativas devem estar ativas e possuir imagem.'
+                    )
+                })
+
         return attrs
 
 
