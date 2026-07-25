@@ -30,6 +30,8 @@
     promptText: document.querySelector("#promptText"),
     audioFile: document.querySelector("#audioFile"),
     currentAudio: document.querySelector("#currentAudio"),
+    imageFile: document.querySelector("#imageFile"),
+    currentImage: document.querySelector("#currentImage"),
     translation: document.querySelector("#translation"),
     expectedTranscript: document.querySelector("#expectedTranscript"),
     acceptedAnswers: document.querySelector("#acceptedAnswers"),
@@ -69,6 +71,7 @@
     elements.exerciseType.addEventListener("change", handleTypeChange);
     elements.card.addEventListener("change", hydrateFromSelectedCard);
     elements.audioFile.addEventListener("change", renderSelectedAudioFile);
+    elements.imageFile.addEventListener("change", renderSelectedImageFile);
     elements.addOptionButton.addEventListener("click", () => addOptionRow());
     elements.copyJsonButton.addEventListener("click", copyJson);
     elements.form.addEventListener("submit", submitExercise);
@@ -269,8 +272,9 @@
     const isMultipleChoice = ["multiple_choice_translation", "multiple_choice_audio_english"].includes(type);
     const isMatchingPairs = type === "matching_pairs";
     const isCompleteAudioText = type === "complete_audio_text";
-    toggle(".prompt-text-field", !["write_translation_from_audio", "multiple_choice_audio_english", "matching_pairs", "complete_audio_text"].includes(type));
-    toggle(".prompt-audio-field", ["just_audio", "multiple_choice_audio_english", "write_translation_from_text_audio", "write_translation_from_audio", "complete_audio_text"].includes(type));
+    toggle(".prompt-text-field", !["write_translation_from_audio", "multiple_choice_audio_english", "matching_pairs", "complete_audio_text", "image_presentation"].includes(type));
+    toggle(".prompt-audio-field", ["just_audio", "multiple_choice_audio_english", "write_translation_from_text_audio", "write_translation_from_audio", "complete_audio_text", "image_presentation"].includes(type));
+    toggle(".prompt-image-field", type === "image_presentation");
     toggle(".translation-field", !["speak_written_text", "multiple_choice_audio_english", "matching_pairs", "complete_audio_text"].includes(type));
     toggle(".expected-field", type === "speak_written_text");
     toggle(".accept-field", type.includes("write_translation"));
@@ -297,6 +301,8 @@
     elements.promptText.value = card.english_name || "";
     elements.audioFile.value = "";
     renderCurrentAudio(card.audio_url || card.audio || "");
+    elements.imageFile.value = "";
+    renderCurrentImage(card.image_url || card.image || "");
     elements.translation.value = card.international_name || "";
     elements.expectedTranscript.value = card.english_name || "";
     elements.clozeTemplate.value = card.english_name || "";
@@ -379,7 +385,7 @@
       prompt.text = elements.promptText.value.trim();
     }
 
-    if (["just_audio", "multiple_choice_audio_english", "write_translation_from_text_audio", "write_translation_from_audio", "complete_audio_text"].includes(type)) {
+    if (["just_audio", "multiple_choice_audio_english", "write_translation_from_text_audio", "write_translation_from_audio", "complete_audio_text", "image_presentation"].includes(type)) {
       const audioUrl = audioUrlOverride || getCurrentAudioUrl();
       if (audioUrl) {
         prompt.audio_url = audioUrl;
@@ -441,11 +447,12 @@
   }
 
 
-  async function uploadAudioIfNeeded() {
-    const file = elements.audioFile.files?.[0];
+  async function uploadCardMediaIfNeeded() {
+    const audioFile = elements.audioFile.files?.[0];
+    const imageFile = elements.imageFile.files?.[0];
 
-    if (!file) {
-      return "";
+    if (!audioFile && !imageFile) {
+      return getCurrentAudioUrl();
     }
 
     if (!elements.card.value) {
@@ -453,7 +460,12 @@
     }
 
     const formData = new FormData();
-    formData.append("audio", file);
+    if (audioFile) {
+      formData.append("audio", audioFile);
+    }
+    if (imageFile) {
+      formData.append("image", imageFile);
+    }
 
     const updatedCard = await apiRequest(`/cards/${encodeURIComponent(elements.card.value)}/`, {
       method: "PATCH",
@@ -465,6 +477,8 @@
     );
     elements.audioFile.value = "";
     renderCurrentAudio(updatedCard.audio || updatedCard.audio_url || "");
+    elements.imageFile.value = "";
+    renderCurrentImage(updatedCard.image || updatedCard.image_url || "");
 
     return updatedCard.audio || updatedCard.audio_url || "";
   }
@@ -494,6 +508,28 @@
     }
 
     elements.currentAudio.innerHTML = `<a href="${escapeAttribute(audioUrl)}" target="_blank" rel="noreferrer">Audio atual do card</a>`;
+  }
+
+  function renderSelectedImageFile() {
+    const file = elements.imageFile.files?.[0];
+
+    if (!file) {
+      const card = getSelectedCard();
+      renderCurrentImage(card?.image_url || card?.image || "");
+      return;
+    }
+
+    elements.currentImage.textContent = `${file.name} sera enviada ao salvar.`;
+    updatePreview();
+  }
+
+  function renderCurrentImage(imageUrl) {
+    if (!imageUrl) {
+      elements.currentImage.textContent = "Nenhuma imagem salva para este card.";
+      return;
+    }
+
+    elements.currentImage.innerHTML = `<a href="${escapeAttribute(imageUrl)}" target="_blank" rel="noreferrer">Imagem atual do card</a>`;
   }
 
   function getOptions() {
@@ -549,7 +585,7 @@
 
     hideAlert();
     try {
-      const uploadedAudioUrl = await uploadAudioIfNeeded();
+      const uploadedAudioUrl = await uploadCardMediaIfNeeded();
       const payload = buildPayload(uploadedAudioUrl);
       await apiRequest("/exercises/", {
         method: "POST",

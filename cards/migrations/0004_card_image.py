@@ -1,0 +1,21 @@
+from django.db import migrations, models
+
+
+class Migration(migrations.Migration):
+
+    dependencies = [
+        ('cards', '0003_usercardaccess'),
+    ]
+
+    operations = [
+        migrations.AddField(
+            model_name='card',
+            name='image',
+            field=models.ImageField(
+                blank=True,
+                null=True,
+                upload_to='cards/images/',
+                verbose_name='Imagem',
+            ),
+        ),
+    ]

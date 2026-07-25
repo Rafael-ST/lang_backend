@@ -6,7 +6,7 @@ from rest_framework.response import Response
 from cards.filters import CardFilterBackend
 from cards.models import Card, UserCardAccess
 from cards.serializers import CardSerializer, MarkCardsSeenSerializer
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAdminUser, IsAuthenticated
 
 
 class CardViewSet(viewsets.ModelViewSet):
@@ -21,6 +21,12 @@ class CardViewSet(viewsets.ModelViewSet):
     search_fields = ['english_name', 'international_name']
     ordering_fields = ['english_name', 'international_name', 'created_at', 'updated_at', 'is_active']
     ordering = ['english_name']
+
+    def get_permissions(self):
+        if self.action in {'create', 'update', 'partial_update', 'destroy'}:
+            return [IsAdminUser()]
+
+        return [IsAuthenticated()]
 
     @action(detail=False, methods=['post'], url_path='mark-seen')
     def mark_seen(self, request):

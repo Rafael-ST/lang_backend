@@ -106,6 +106,7 @@
                   <option value="speak_written_text">Falar texto escrito</option>
                   <option value="matching_pairs">Associar traducao e ingles</option>
                   <option value="complete_audio_text">Completar texto ouvindo audio</option>
+                  <option value="image_presentation">Apresentacao com imagem</option>
                 </select>
               </div>
 
@@ -138,6 +139,11 @@
                 <label class="form-label" for="audioFile">Audio</label>
                 <input id="audioFile" class="form-control" type="file" accept="audio/*" />
                 <div id="currentAudio" class="form-text"></div>
+              </div>
+              <div class="col-12 col-md-6 prompt-image-field d-none">
+                <label class="form-label" for="imageFile">Imagem do card</label>
+                <input id="imageFile" class="form-control" type="file" accept="image/jpeg,image/png,image/webp" />
+                <div id="currentImage" class="form-text"></div>
               </div>
               <div class="col-12 col-md-6 translation-field">
                 <label class="form-label" for="translation">Traducao correta</label>

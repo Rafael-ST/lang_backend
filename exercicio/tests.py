@@ -57,3 +57,28 @@ class CompleteAudioTextSerializerTests(TestCase):
 
         self.assertFalse(serializer.is_valid())
         self.assertIn('answer_config', serializer.errors)
+
+    def test_accepts_image_presentation_with_image_audio_and_translation(self):
+        self.card.image = 'cards/images/how-are-you.jpg'
+        self.card.save(update_fields=['image'])
+        payload = self.build_payload()
+        payload.update({
+            'type': Exercise.ExerciseType.IMAGE_PRESENTATION,
+            'prompt': {},
+            'answer_config': {},
+        })
+        serializer = ExerciseSerializer(data=payload)
+
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+
+    def test_rejects_image_presentation_without_image(self):
+        payload = self.build_payload()
+        payload.update({
+            'type': Exercise.ExerciseType.IMAGE_PRESENTATION,
+            'prompt': {},
+            'answer_config': {},
+        })
+        serializer = ExerciseSerializer(data=payload)
+
+        self.assertFalse(serializer.is_valid())
+        self.assertIn('card', serializer.errors)

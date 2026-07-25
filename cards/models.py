@@ -14,7 +14,12 @@ class Card(BaseModel):
         blank=True,
         verbose_name='Áudio',
     )
-
+    image = models.ImageField(
+        upload_to='cards/images/',
+        null=True,
+        blank=True,
+        verbose_name='Imagem',
+    )
 
     def __str__(self):
         return self.english_name

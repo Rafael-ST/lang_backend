@@ -1,11 +1,16 @@
+from io import BytesIO
+
 from django.urls import reverse
 from django.contrib.auth import get_user_model
+from django.core.files.uploadedfile import SimpleUploadedFile
 
 from django.test import TestCase
+from PIL import Image
 from rest_framework import status
 from rest_framework.test import APIClient
 
 from cards.models import Card, UserCardAccess
+from cards.serializers import CardSerializer
 from categorias.models import Categoria
 
 
@@ -148,3 +153,95 @@ class MarkCardsSeenApiTests(TestCase):
             UserCardAccess.objects.filter(user=self.user, card=self.card).count(),
             1,
         )
+
+
+class CardImageSerializerTests(TestCase):
+    def setUp(self):
+        category = Categoria.objects.create(nome='Images')
+        self.card = Card.objects.create(
+            english_name='Cat',
+            international_name='Gato',
+            categoria=category,
+        )
+
+    def test_normalizes_valid_card_image_as_jpeg(self):
+        image_bytes = BytesIO()
+        Image.new('RGB', (800, 600), '#446688').save(
+            image_bytes,
+            format='PNG',
+        )
+        upload = SimpleUploadedFile(
+            'cat.png',
+            image_bytes.getvalue(),
+            content_type='image/png',
+        )
+        serializer = CardSerializer(
+            self.card,
+            data={'image': upload},
+            partial=True,
+        )
+
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+        normalized_image = serializer.validated_data['image']
+        with Image.open(normalized_image) as image:
+            self.assertEqual(image.format, 'JPEG')
+            self.assertLessEqual(max(image.size), 1600)
+
+    def test_rejects_file_disguised_as_card_image(self):
+        upload = SimpleUploadedFile(
+            'cat.png',
+            b'not-an-image',
+            content_type='image/png',
+        )
+        serializer = CardSerializer(
+            self.card,
+            data={'image': upload},
+            partial=True,
+        )
+
+        self.assertFalse(serializer.is_valid())
+        self.assertIn('image', serializer.errors)
+
+
+class CardWritePermissionTests(TestCase):
+    def setUp(self):
+        category = Categoria.objects.create(nome='Permissions')
+        self.card = Card.objects.create(
+            english_name='Dog',
+            international_name='Cachorro',
+            categoria=category,
+        )
+        self.url = reverse('card-detail', args=[self.card.id])
+        self.user = get_user_model().objects.create_user(
+            username='student',
+            password='test-password',
+        )
+        self.admin = get_user_model().objects.create_user(
+            username='content-admin',
+            password='test-password',
+            is_staff=True,
+        )
+
+    def test_regular_user_cannot_change_card_content(self):
+        client = APIClient()
+        client.force_authenticate(self.user)
+
+        response = client.patch(
+            self.url,
+            {'english_name': 'Changed'},
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_staff_user_can_change_card_content(self):
+        client = APIClient()
+        client.force_authenticate(self.admin)
+
+        response = client.patch(
+            self.url,
+            {'english_name': 'Puppy'},
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)

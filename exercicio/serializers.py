@@ -99,6 +99,21 @@ class ExerciseSerializer(serializers.ModelSerializer):
                     'card': 'O card selecionado deve possuir audio.'
                 })
 
+        if exercise_type == Exercise.ExerciseType.IMAGE_PRESENTATION:
+            card = attrs.get('card', getattr(self.instance, 'card', None))
+            if not getattr(card, 'image', None):
+                raise serializers.ValidationError({
+                    'card': 'O card selecionado deve possuir uma imagem.'
+                })
+            if not getattr(card, 'audio', None):
+                raise serializers.ValidationError({
+                    'card': 'O card selecionado deve possuir audio.'
+                })
+            if not str(getattr(card, 'international_name', '')).strip():
+                raise serializers.ValidationError({
+                    'card': 'O card selecionado deve possuir traducao.'
+                })
+
         return attrs
 
 
