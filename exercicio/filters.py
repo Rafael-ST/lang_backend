@@ -6,6 +6,7 @@ class ExerciseFilterBackend(BaseFilterBackend):
         exercise_set = request.query_params.get('exercise_set') or request.query_params.get('exercise_set_id')
         card = request.query_params.get('card') or request.query_params.get('card_id')
         exercise_type = request.query_params.get('type')
+        skill = request.query_params.get('skill')
         difficulty = request.query_params.get('difficulty')
         is_active = request.query_params.get('is_active')
 
@@ -17,6 +18,9 @@ class ExerciseFilterBackend(BaseFilterBackend):
 
         if exercise_type:
             queryset = queryset.filter(type=exercise_type)
+
+        if skill:
+            queryset = queryset.filter(skill=skill)
 
         if difficulty:
             queryset = queryset.filter(difficulty=difficulty)

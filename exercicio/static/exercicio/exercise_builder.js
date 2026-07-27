@@ -5,6 +5,7 @@
   const state = {
     cards: [],
     exerciseSets: [],
+    exerciseTypes: [],
     filteredCards: [],
     filteredSets: [],
   };
@@ -24,6 +25,7 @@
     exerciseSet: document.querySelector("#exerciseSet"),
     card: document.querySelector("#card"),
     exerciseType: document.querySelector("#exerciseType"),
+    exerciseSkill: document.querySelector("#exerciseSkill"),
     order: document.querySelector("#order"),
     difficulty: document.querySelector("#difficulty"),
     isActive: document.querySelector("#isActive"),
@@ -49,12 +51,19 @@
   init();
 
   function init() {
+    state.exerciseTypes = Array.from(elements.exerciseType.options).map(
+      (option) => ({
+        label: option.textContent,
+        value: option.value,
+      })
+    );
     loadConnection();
     if (!readStorage().accessToken) {
       window.location.replace(LOGIN_URL);
       return;
     }
     bindEvents();
+    filterExerciseTypesBySkill();
     addDefaultOptionRows();
     updateTypeFields();
     updatePreview();
@@ -69,6 +78,7 @@
     elements.cardSearch.addEventListener("input", renderCards);
     elements.setSearch.addEventListener("input", renderExerciseSets);
     elements.exerciseType.addEventListener("change", handleTypeChange);
+    elements.exerciseSkill.addEventListener("change", handleSkillChange);
     elements.card.addEventListener("change", hydrateFromSelectedCard);
     elements.audioFile.addEventListener("change", renderSelectedAudioFile);
     elements.imageFile.addEventListener("change", renderSelectedImageFile);
@@ -263,8 +273,56 @@
   }
 
   function handleTypeChange() {
+    elements.exerciseSkill.value = getDefaultSkill(
+      elements.exerciseType.value
+    );
     updateTypeFields();
     hydrateFromSelectedCard();
+  }
+
+  function handleSkillChange() {
+    filterExerciseTypesBySkill();
+    updateTypeFields();
+    hydrateFromSelectedCard();
+  }
+
+  function filterExerciseTypesBySkill() {
+    const selectedSkill = elements.exerciseSkill.value;
+    const currentType = elements.exerciseType.value;
+    const availableTypes = state.exerciseTypes.filter(
+      (exerciseType) =>
+        getDefaultSkill(exerciseType.value) === selectedSkill
+    );
+
+    elements.exerciseType.innerHTML = availableTypes
+      .map(
+        (exerciseType) =>
+          `<option value="${escapeAttribute(exerciseType.value)}">${escapeHtml(exerciseType.label)}</option>`
+      )
+      .join("");
+
+    if (availableTypes.some((exerciseType) => exerciseType.value === currentType)) {
+      elements.exerciseType.value = currentType;
+    }
+  }
+
+  function getDefaultSkill(type) {
+    if (["speak_written_text", "speak_english_from_translation"].includes(type)) {
+      return "speaking";
+    }
+
+    if ([
+      "just_audio",
+      "multiple_choice_audio_english",
+      "write_translation_from_audio",
+      "complete_audio_text",
+      "image_presentation",
+      "audio_multiple_choice_images",
+    ].includes(type)) {
+      return "listening";
+    }
+
+    return "reading";
   }
 
   function updateTypeFields() {
@@ -272,11 +330,11 @@
     const isMultipleChoice = ["multiple_choice_translation", "multiple_choice_audio_english", "image_multiple_choice_english", "audio_multiple_choice_images"].includes(type);
     const isMatchingPairs = type === "matching_pairs";
     const isCompleteAudioText = type === "complete_audio_text";
-    toggle(".prompt-text-field", !["write_translation_from_audio", "multiple_choice_audio_english", "matching_pairs", "complete_audio_text", "image_presentation", "image_multiple_choice_english", "audio_multiple_choice_images"].includes(type));
+    toggle(".prompt-text-field", !["write_translation_from_audio", "multiple_choice_audio_english", "matching_pairs", "complete_audio_text", "image_presentation", "image_multiple_choice_english", "audio_multiple_choice_images", "speak_english_from_translation"].includes(type));
     toggle(".prompt-audio-field", ["just_audio", "multiple_choice_audio_english", "write_translation_from_text_audio", "write_translation_from_audio", "complete_audio_text", "image_presentation", "audio_multiple_choice_images"].includes(type));
     toggle(".prompt-image-field", ["image_presentation", "image_multiple_choice_english", "audio_multiple_choice_images"].includes(type));
     toggle(".translation-field", !["speak_written_text", "multiple_choice_audio_english", "matching_pairs", "complete_audio_text", "image_multiple_choice_english", "audio_multiple_choice_images"].includes(type));
-    toggle(".expected-field", type === "speak_written_text");
+    toggle(".expected-field", ["speak_written_text", "speak_english_from_translation"].includes(type));
     toggle(".accept-field", type.includes("write_translation"));
     toggle(".cloze-field", isCompleteAudioText);
     elements.optionsSection.classList.toggle("d-none", !isMultipleChoice && !isMatchingPairs);
@@ -381,7 +439,7 @@
     const prompt = {};
     const answerConfig = {};
 
-    if (!["write_translation_from_audio", "multiple_choice_audio_english", "complete_audio_text", "image_multiple_choice_english", "audio_multiple_choice_images"].includes(type) && elements.promptText.value.trim()) {
+    if (!["write_translation_from_audio", "multiple_choice_audio_english", "complete_audio_text", "image_multiple_choice_english", "audio_multiple_choice_images", "speak_english_from_translation"].includes(type) && elements.promptText.value.trim()) {
       prompt.text = elements.promptText.value.trim();
     }
 
@@ -435,6 +493,12 @@
       answerConfig.language = "en-US";
     }
 
+    if (type === "speak_english_from_translation") {
+      prompt.text = elements.translation.value.trim();
+      answerConfig.expected_transcript = elements.expectedTranscript.value.trim();
+      answerConfig.language = "en-US";
+    }
+
     if (type === "complete_audio_text") {
       prompt.text = elements.clozeTemplate.value.trim();
       answerConfig.correct_text = elements.clozeAnswer.value.trim();
@@ -446,6 +510,7 @@
       exercise_set: elements.exerciseSet.value,
       card: elements.card.value,
       type,
+      skill: elements.exerciseSkill.value,
       prompt,
       options: ["multiple_choice_translation", "multiple_choice_audio_english", "image_multiple_choice_english", "audio_multiple_choice_images"].includes(type) ? getOptions() : [],
       pair_cards: type === "matching_pairs" ? getSelectedOptionCardIds() : [],

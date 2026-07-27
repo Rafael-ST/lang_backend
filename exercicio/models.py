@@ -7,12 +7,21 @@ from django.conf import settings
 from ExerciseSet.models import ExerciseSet
 
 class Exercise(models.Model):
+    class Skill(models.TextChoices):
+        LISTENING = "listening", "Listening"
+        READING = "reading", "Reading"
+        SPEAKING = "speaking", "Speaking"
+
     class ExerciseType(models.TextChoices):
         MULTIPLE_CHOICE_TRANSLATION = "multiple_choice_translation", "Multipla escolha"
         MULTIPLE_CHOICE_AUDIO_ENGLISH = "multiple_choice_audio_english", "Multipla escolha com audio em ingles"
         WRITE_FROM_TEXT_AUDIO = "write_translation_from_text_audio", "Escrever com texto e audio"
         WRITE_FROM_AUDIO = "write_translation_from_audio", "Escrever ouvindo audio"
         SPEAK_WRITTEN_TEXT = "speak_written_text", "Falar texto escrito"
+        SPEAK_ENGLISH_FROM_TRANSLATION = (
+            "speak_english_from_translation",
+            "Falar em ingles a partir do portugues",
+        )
         JUST_AUDIO = "just_audio", "Apenas audio"
         MATCHING_PAIRS = "matching_pairs", "Associar traducao e ingles"
         COMPLETE_AUDIO_TEXT = "complete_audio_text", "Completar texto ouvindo audio"
@@ -52,6 +61,11 @@ class Exercise(models.Model):
         max_length=50,
         choices=ExerciseType.choices,
     )
+    skill = models.CharField(
+        max_length=20,
+        choices=Skill.choices,
+        default=Skill.READING,
+    )
 
     prompt = models.JSONField(default=dict, blank=True)
     options = models.JSONField(default=list, blank=True)
@@ -66,6 +80,25 @@ class Exercise(models.Model):
 
     class Meta:
         ordering = ["order", "id"]
+
+    @classmethod
+    def default_skill_for_type(cls, exercise_type):
+        if exercise_type in {
+            cls.ExerciseType.SPEAK_WRITTEN_TEXT,
+            cls.ExerciseType.SPEAK_ENGLISH_FROM_TRANSLATION,
+        }:
+            return cls.Skill.SPEAKING
+        if exercise_type in {
+            cls.ExerciseType.JUST_AUDIO,
+            cls.ExerciseType.MULTIPLE_CHOICE_AUDIO_ENGLISH,
+            cls.ExerciseType.WRITE_FROM_AUDIO,
+            cls.ExerciseType.COMPLETE_AUDIO_TEXT,
+            cls.ExerciseType.IMAGE_PRESENTATION,
+            cls.ExerciseType.AUDIO_MULTIPLE_CHOICE_IMAGES,
+        }:
+            return cls.Skill.LISTENING
+
+        return cls.Skill.READING
 
     def __str__(self):
         return f"{self.get_type_display()} - {self.card}"

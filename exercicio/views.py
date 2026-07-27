@@ -19,8 +19,8 @@ class ExerciseViewSet(viewsets.ModelViewSet):
         filters.SearchFilter,
         filters.OrderingFilter,
     ]
-    search_fields = ['card__english_name', 'card__international_name', 'exercise_set__title', 'type']
-    ordering_fields = ['order', 'difficulty', 'type', 'created_at', 'updated_at', 'is_active']
+    search_fields = ['card__english_name', 'card__international_name', 'exercise_set__title', 'type', 'skill']
+    ordering_fields = ['order', 'difficulty', 'type', 'skill', 'created_at', 'updated_at', 'is_active']
     ordering = ['order', 'id']
 
     def get_queryset(self):

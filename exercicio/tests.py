@@ -43,6 +43,76 @@ class CompleteAudioTextSerializerTests(TestCase):
         serializer = ExerciseSerializer(data=self.build_payload())
 
         self.assertTrue(serializer.is_valid(), serializer.errors)
+        self.assertEqual(
+            serializer.validated_data['skill'],
+            Exercise.Skill.LISTENING,
+        )
+
+    def test_default_skill_mapping_covers_all_exercise_types(self):
+        expected_skills = {
+            Exercise.ExerciseType.JUST_AUDIO: Exercise.Skill.LISTENING,
+            Exercise.ExerciseType.MULTIPLE_CHOICE_AUDIO_ENGLISH: Exercise.Skill.LISTENING,
+            Exercise.ExerciseType.WRITE_FROM_AUDIO: Exercise.Skill.LISTENING,
+            Exercise.ExerciseType.COMPLETE_AUDIO_TEXT: Exercise.Skill.LISTENING,
+            Exercise.ExerciseType.IMAGE_PRESENTATION: Exercise.Skill.LISTENING,
+            Exercise.ExerciseType.AUDIO_MULTIPLE_CHOICE_IMAGES: Exercise.Skill.LISTENING,
+            Exercise.ExerciseType.MULTIPLE_CHOICE_TRANSLATION: Exercise.Skill.READING,
+            Exercise.ExerciseType.WRITE_FROM_TEXT_AUDIO: Exercise.Skill.READING,
+            Exercise.ExerciseType.MATCHING_PAIRS: Exercise.Skill.READING,
+            Exercise.ExerciseType.IMAGE_MULTIPLE_CHOICE_ENGLISH: Exercise.Skill.READING,
+            Exercise.ExerciseType.SPEAK_WRITTEN_TEXT: Exercise.Skill.SPEAKING,
+            Exercise.ExerciseType.SPEAK_ENGLISH_FROM_TRANSLATION: Exercise.Skill.SPEAKING,
+        }
+
+        self.assertEqual(
+            {
+                exercise_type: Exercise.default_skill_for_type(exercise_type)
+                for exercise_type in Exercise.ExerciseType.values
+            },
+            expected_skills,
+        )
+
+    def test_accepts_speaking_english_from_portuguese(self):
+        payload = self.build_payload()
+        payload.update({
+            'type': Exercise.ExerciseType.SPEAK_ENGLISH_FROM_TRANSLATION,
+            'prompt': {'text': 'Como voce esta?'},
+            'answer_config': {
+                'expected_transcript': 'How are you?',
+                'language': 'en-US',
+            },
+        })
+        serializer = ExerciseSerializer(data=payload)
+
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+        self.assertEqual(
+            serializer.validated_data['skill'],
+            Exercise.Skill.SPEAKING,
+        )
+
+    def test_rejects_speaking_english_without_portuguese_prompt(self):
+        payload = self.build_payload()
+        payload.update({
+            'type': Exercise.ExerciseType.SPEAK_ENGLISH_FROM_TRANSLATION,
+            'prompt': {},
+            'answer_config': {'expected_transcript': 'How are you?'},
+        })
+        serializer = ExerciseSerializer(data=payload)
+
+        self.assertFalse(serializer.is_valid())
+        self.assertIn('prompt', serializer.errors)
+
+    def test_rejects_speaking_english_without_expected_transcript(self):
+        payload = self.build_payload()
+        payload.update({
+            'type': Exercise.ExerciseType.SPEAK_ENGLISH_FROM_TRANSLATION,
+            'prompt': {'text': 'Como voce esta?'},
+            'answer_config': {},
+        })
+        serializer = ExerciseSerializer(data=payload)
+
+        self.assertFalse(serializer.is_valid())
+        self.assertIn('answer_config', serializer.errors)
 
     def test_rejects_template_without_exactly_one_blank(self):
         serializer = ExerciseSerializer(

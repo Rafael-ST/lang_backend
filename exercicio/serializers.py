@@ -22,6 +22,7 @@ class ExerciseSerializer(serializers.ModelSerializer):
             'pair_cards',
             'pair_card_details',
             'type',
+            'skill',
             'prompt',
             'options',
             'answer_config',
@@ -36,6 +37,12 @@ class ExerciseSerializer(serializers.ModelSerializer):
     def validate(self, attrs):
         exercise_type = attrs.get('type', getattr(self.instance, 'type', None))
         pair_cards = attrs.get('pair_cards')
+
+        if (
+            'skill' not in attrs and
+            (self.instance is None or 'type' in attrs)
+        ):
+            attrs['skill'] = Exercise.default_skill_for_type(exercise_type)
 
         if exercise_type == Exercise.ExerciseType.MATCHING_PAIRS:
             if pair_cards is None and self.instance:
@@ -196,6 +203,30 @@ class ExerciseSerializer(serializers.ModelSerializer):
                     'options': (
                         'Todas as alternativas devem estar ativas e possuir imagem.'
                     )
+                })
+
+        if exercise_type == Exercise.ExerciseType.SPEAK_ENGLISH_FROM_TRANSLATION:
+            prompt = attrs.get('prompt', getattr(self.instance, 'prompt', {}))
+            answer_config = attrs.get(
+                'answer_config',
+                getattr(self.instance, 'answer_config', {}),
+            )
+            portuguese_text = (
+                prompt.get('text', '') if isinstance(prompt, dict) else ''
+            )
+            expected_transcript = (
+                answer_config.get('expected_transcript', '')
+                if isinstance(answer_config, dict)
+                else ''
+            )
+
+            if not str(portuguese_text).strip():
+                raise serializers.ValidationError({
+                    'prompt': 'Informe o texto que sera exibido em portugues.'
+                })
+            if not str(expected_transcript).strip():
+                raise serializers.ValidationError({
+                    'answer_config': 'Informe o texto esperado em ingles.'
                 })
 
         return attrs
