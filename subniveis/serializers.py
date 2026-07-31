@@ -9,7 +9,7 @@ class SubNivelSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = SubNivel
-        fields = ['id', 'nome', 'subnivel', 'ordem', 'is_active', 'is_completed', 'created_at', 'updated_at']
+        fields = ['id', 'nome', 'description', 'subnivel', 'ordem', 'is_active', 'is_completed', 'created_at', 'updated_at']
         read_only_fields = ['id', 'is_completed', 'created_at', 'updated_at']
 
     def get_is_completed(self, obj):

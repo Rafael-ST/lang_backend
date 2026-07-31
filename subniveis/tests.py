@@ -23,6 +23,7 @@ class HierarchyProgressTests(TestCase):
         self.level = Nivel.objects.create(nome='A1')
         self.first_sublevel = SubNivel.objects.create(
             nome='A1.1',
+            description='Apresentacao do primeiro subnivel.',
             subnivel=self.level,
             ordem=1,
         )
@@ -91,3 +92,14 @@ class HierarchyProgressTests(TestCase):
         self.complete_exercise(self.exercises[1])
         serializer = NivelSerializer(self.level, context=self.context)
         self.assertTrue(serializer.data['is_completed'])
+
+    def test_serializer_exposes_sublevel_description(self):
+        serialized = SubNivelSerializer(
+            self.first_sublevel,
+            context=self.context,
+        ).data
+
+        self.assertEqual(
+            serialized['description'],
+            'Apresentacao do primeiro subnivel.',
+        )

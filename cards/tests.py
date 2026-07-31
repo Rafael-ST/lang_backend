@@ -17,6 +17,12 @@ from categorias.models import Categoria
 class CardApiTests(TestCase):
     def setUp(self):
         self.client = APIClient()
+        self.user = get_user_model().objects.create_user(
+            username='card-admin',
+            password='test-password',
+            is_staff=True,
+        )
+        self.client.force_authenticate(self.user)
         self.categoria = Categoria.objects.create(nome='Test Category')
         self.card_list_url = reverse('card-list')
 
@@ -153,6 +159,32 @@ class MarkCardsSeenApiTests(TestCase):
             UserCardAccess.objects.filter(user=self.user, card=self.card).count(),
             1,
         )
+
+    def test_lists_only_cards_seen_by_authenticated_user(self):
+        other_card = Card.objects.create(
+            english_name='Goodbye',
+            international_name='Tchau',
+            categoria=self.categoria,
+        )
+        UserCardAccess.objects.create(user=self.user, card=self.card)
+
+        response = self.client.get(reverse('card-seen'))
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual([str(card['id']) for card in response.data], [str(self.card.id)])
+        self.assertNotIn(str(other_card.id), [str(card['id']) for card in response.data])
+
+    def test_does_not_list_cards_seen_by_another_user(self):
+        other_user = get_user_model().objects.create_user(
+            username='another-learner',
+            password='test-password',
+        )
+        UserCardAccess.objects.create(user=other_user, card=self.card)
+
+        response = self.client.get(reverse('card-seen'))
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data, [])
 
 
 class CardImageSerializerTests(TestCase):

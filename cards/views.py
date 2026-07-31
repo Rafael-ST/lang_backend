@@ -61,3 +61,18 @@ class CardViewSet(viewsets.ModelViewSet):
             },
             status=status.HTTP_200_OK,
         )
+
+    @action(detail=False, methods=['get'], url_path='seen')
+    def seen(self, request):
+        queryset = (
+            Card.objects.filter(
+                is_active=True,
+                user_accesses__user=request.user,
+            )
+            .select_related('categoria')
+            .distinct()
+            .order_by('categoria__nome', 'english_name')
+        )
+
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)

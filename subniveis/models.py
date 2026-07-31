@@ -5,6 +5,7 @@ from niveis.models import Nivel
 
 class SubNivel(BaseModel):
     nome = models.CharField(verbose_name='Nome', max_length=100)
+    description = models.TextField(verbose_name='Descricao', blank=True)
     subnivel = models.ForeignKey(Nivel, verbose_name='Nível', on_delete=models.CASCADE, related_name='subniveis')
     ordem = models.PositiveIntegerField(verbose_name='Ordem', default=0)
 
