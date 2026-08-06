@@ -1,16 +1,16 @@
 ﻿from rest_framework import filters, status, viewsets
 from rest_framework.decorators import action
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAdminUser, IsAuthenticated
 from rest_framework.response import Response
 
 from ExerciseSet.filters import ExerciseSetFilterBackend, ExerciseSetProgressFilterBackend
-from ExerciseSet.models import ExerciseSet, ExerciseSetProgress
-from ExerciseSet.serializers import ExerciseSetProgressSerializer, ExerciseSetSerializer
+from ExerciseSet.models import ExerciseSet, ExerciseSetImage, ExerciseSetProgress
+from ExerciseSet.serializers import ExerciseSetImageSerializer, ExerciseSetProgressSerializer, ExerciseSetSerializer
 from exercicio.models import ExerciseAttempt
 
 
 class ExerciseSetViewSet(viewsets.ModelViewSet):
-    queryset = ExerciseSet.objects.select_related('sublevel').prefetch_related('exercises', 'progresses').all().order_by('order', 'created_at')
+    queryset = ExerciseSet.objects.select_related('sublevel', 'image').prefetch_related('exercises', 'progresses').all().order_by('order', 'created_at')
     serializer_class = ExerciseSetSerializer
     permission_classes = [IsAuthenticated]
     filter_backends = [
@@ -21,6 +21,22 @@ class ExerciseSetViewSet(viewsets.ModelViewSet):
     search_fields = ['title', 'description', 'sublevel__nome']
     ordering_fields = ['title', 'order', 'created_at', 'updated_at', 'is_active']
     ordering = ['order', 'created_at']
+
+    def get_permissions(self):
+        if self.action in {'create', 'update', 'partial_update', 'destroy'}:
+            return [IsAdminUser()]
+
+        return [IsAuthenticated()]
+
+
+class ExerciseSetImageViewSet(viewsets.ModelViewSet):
+    queryset = ExerciseSetImage.objects.all().order_by('name')
+    serializer_class = ExerciseSetImageSerializer
+    permission_classes = [IsAdminUser]
+    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
+    search_fields = ['name']
+    ordering_fields = ['name', 'created_at', 'updated_at', 'is_active']
+    ordering = ['name']
 
     @action(detail=True, methods=['post'], url_path='reset')
     def reset(self, request, pk=None):

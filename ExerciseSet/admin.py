@@ -1,6 +1,15 @@
 from django.contrib import admin
 
-from ExerciseSet.models import ExerciseSet, ExerciseSetProgress
+from ExerciseSet.models import ExerciseSet, ExerciseSetImage, ExerciseSetProgress
+
+
+@admin.register(ExerciseSetImage)
+class ExerciseSetImageAdmin(admin.ModelAdmin):
+    list_display = ('name', 'is_active', 'created_at', 'updated_at')
+    list_filter = ('is_active', 'created_at', 'updated_at')
+    search_fields = ('name',)
+    ordering = ('name',)
+    readonly_fields = ('id', 'created_at', 'updated_at')
 
 
 @admin.register(ExerciseSet)
@@ -10,7 +19,7 @@ class ExerciseSetAdmin(admin.ModelAdmin):
     search_fields = ('title', 'description', 'sublevel__nome')
     ordering = ('order', 'created_at')
     readonly_fields = ('id', 'created_at', 'updated_at')
-    autocomplete_fields = ('sublevel',)
+    autocomplete_fields = ('sublevel', 'image')
 
 
 @admin.register(ExerciseSetProgress)
