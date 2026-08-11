@@ -9,6 +9,8 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.decorators import action
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
+from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.exceptions import TokenError
 
 from authentication.serializers import (
     CustomTokenObtainPairSerializer,
@@ -57,6 +59,7 @@ def build_token_response(user, include_refresh=False):
 
 class GoogleAuthView(APIView):
     permission_classes = [permissions.AllowAny]
+    throttle_scope = 'auth'
 
     def post(self, request):
         serializer = GoogleAuthSerializer(data=request.data)
@@ -134,11 +137,12 @@ class GoogleAuthView(APIView):
                 defaults={'pontos': DEFAULT_PROFILE_POINTS},
             )
 
-        return build_token_response(user, include_refresh=True)
+        return build_token_response(user)
 
 
 class CustomTokenObtainPairView(TokenObtainPairView):
     serializer_class = CustomTokenObtainPairSerializer
+    throttle_scope = 'auth'
 
     def post(self, request, *args, **kwargs):
         response = super().post(request, *args, **kwargs)
@@ -172,6 +176,8 @@ class CustomTokenObtainPairView(TokenObtainPairView):
 
 
 class CustomTokenRefreshView(TokenRefreshView):
+    throttle_scope = 'auth'
+
     def post(self, request, *args, **kwargs):
         data = request.data.copy()
         refresh = request.COOKIES.get(settings.JWT_REFRESH_COOKIE_NAME)
@@ -182,7 +188,44 @@ class CustomTokenRefreshView(TokenRefreshView):
         serializer = self.get_serializer(data=data)
         serializer.is_valid(raise_exception=True)
 
-        return Response(serializer.validated_data, status=status.HTTP_200_OK)
+        rotated_refresh = serializer.validated_data.get('refresh')
+        response_data = dict(serializer.validated_data)
+        response_data.pop('refresh', None)
+        response = Response(response_data, status=status.HTTP_200_OK)
+        if rotated_refresh:
+            response.set_cookie(
+                key=settings.JWT_REFRESH_COOKIE_NAME,
+                value=rotated_refresh,
+                httponly=True,
+                secure=settings.JWT_REFRESH_COOKIE_SECURE,
+                samesite=settings.JWT_REFRESH_COOKIE_SAMESITE,
+                max_age=settings.JWT_REFRESH_COOKIE_MAX_AGE,
+                path='/',
+            )
+        return response
+
+
+class LogoutView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        refresh = (
+            request.data.get('refresh')
+            or request.COOKIES.get(settings.JWT_REFRESH_COOKIE_NAME)
+        )
+        if refresh:
+            try:
+                RefreshToken(refresh).blacklist()
+            except TokenError:
+                pass
+
+        response = Response(status=status.HTTP_204_NO_CONTENT)
+        response.delete_cookie(
+            settings.JWT_REFRESH_COOKIE_NAME,
+            path='/',
+            samesite=settings.JWT_REFRESH_COOKIE_SAMESITE,
+        )
+        return response
 
 
 class UserViewSet(viewsets.ModelViewSet):
@@ -196,6 +239,7 @@ class UserViewSet(viewsets.ModelViewSet):
     search_fields = ['username', 'email', 'first_name', 'last_name']
     ordering_fields = ['username', 'email', 'first_name', 'last_name', 'date_joined', 'last_login', 'is_active']
     ordering = ['username']
+    throttle_scope = 'auth'
 
     def get_permissions(self):
         if self.action == 'create':

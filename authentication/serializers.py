@@ -147,7 +147,15 @@ class UserSerializer(serializers.ModelSerializer):
             'password',
             'profile_picture_url',
         ]
-        read_only_fields = ['id', 'date_joined', 'last_login', 'profile_picture_url']
+        read_only_fields = [
+            'id',
+            'is_active',
+            'is_staff',
+            'is_superuser',
+            'date_joined',
+            'last_login',
+            'profile_picture_url',
+        ]
 
     def get_profile_picture_url(self, obj):
         picture = getattr(getattr(obj, 'perfil', None), 'profile_picture', None)

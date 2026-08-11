@@ -1,9 +1,13 @@
+from django.contrib.auth import get_user_model
 from django.test import TestCase
+from django.urls import reverse
+from rest_framework import status
+from rest_framework.test import APITestCase
 
 from cards.models import Card
 from categorias.models import Categoria
 from ExerciseSet.models import ExerciseSet
-from exercicio.models import Exercise
+from exercicio.models import Exercise, ExerciseAttempt
 from exercicio.serializers import ExerciseSerializer
 from niveis.models import Nivel
 from subniveis.models import SubNivel
@@ -199,6 +203,7 @@ class CompleteAudioTextSerializerTests(TestCase):
         self.assertFalse(serializer.is_valid())
         self.assertIn('options', serializer.errors)
 
+
     def test_accepts_audio_multiple_choice_with_four_image_cards(self):
         self.card.image = 'cards/images/how-are-you.jpg'
         self.card.save(update_fields=['image'])
@@ -263,3 +268,72 @@ class CompleteAudioTextSerializerTests(TestCase):
 
         self.assertFalse(serializer.is_valid())
         self.assertIn('options', serializer.errors)
+
+
+class ExerciseApiSecurityTests(APITestCase):
+    def setUp(self):
+        self.user = get_user_model().objects.create_user(
+            username='secure-learner',
+            password='test-password',
+        )
+        self.client.force_authenticate(self.user)
+        category = Categoria.objects.create(nome='Security')
+        level = Nivel.objects.create(nome='Secure A1')
+        sublevel = SubNivel.objects.create(nome='Secure A1.1', subnivel=level)
+        exercise_set = ExerciseSet.objects.create(
+            sublevel=sublevel,
+            title='Secure set',
+        )
+        self.correct_card = Card.objects.create(
+            english_name='Hello',
+            international_name='Ola',
+            categoria=category,
+        )
+        self.wrong_card = Card.objects.create(
+            english_name='Goodbye',
+            international_name='Tchau',
+            categoria=category,
+        )
+        self.exercise = Exercise.objects.create(
+            exercise_set=exercise_set,
+            card=self.correct_card,
+            type=Exercise.ExerciseType.MULTIPLE_CHOICE_TRANSLATION,
+            answer_config={'correct_card_id': str(self.correct_card.id)},
+        )
+
+    def test_server_rejects_forged_correct_flag(self):
+        initial_points = self.user.perfil.pontos
+        response = self.client.post(
+            reverse('exercise-complete', args=[self.exercise.id]),
+            {
+                'is_correct': True,
+                'answer': {'selected_option_id': str(self.wrong_card.id)},
+            },
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertFalse(response.data['exercise_completed'])
+        self.assertFalse(ExerciseAttempt.objects.get().is_correct)
+        self.user.perfil.refresh_from_db()
+        self.assertEqual(self.user.perfil.pontos, initial_points - 1)
+
+    def test_server_accepts_correct_answer_despite_false_client_flag(self):
+        response = self.client.post(
+            reverse('exercise-complete', args=[self.exercise.id]),
+            {
+                'is_correct': False,
+                'answer': {'selected_option_id': str(self.correct_card.id)},
+            },
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(response.data['exercise_completed'])
+        self.assertTrue(ExerciseAttempt.objects.get().is_correct)
+
+    def test_regular_user_cannot_edit_exercise_content(self):
+        response = self.client.patch(
+            reverse('exercise-detail', args=[self.exercise.id]),
+            {'difficulty': 99},
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)

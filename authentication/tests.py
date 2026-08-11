@@ -40,7 +40,9 @@ class GoogleAuthViewTests(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIn('access', response.data)
-        self.assertIn('refresh', response.data)
+        self.assertNotIn('refresh', response.data)
+        self.assertIn('refresh_token', response.cookies)
+        self.assertTrue(response.cookies['refresh_token']['httponly'])
         self.assertEqual(response.data['usuario']['email'], 'google@example.com')
 
         user = User.objects.get(email='google@example.com')
@@ -222,3 +224,38 @@ class CredentialLoginTests(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
         self.assertEqual(response.data['detail'], 'E-mail ou senha inválidos.')
+
+
+class UserPrivilegeSecurityTests(APITestCase):
+    def test_public_registration_cannot_create_admin(self):
+        response = self.client.post(
+            reverse('usuario-list'),
+            {
+                'username': 'attacker@example.com',
+                'email': 'attacker@example.com',
+                'password': 'a-valid-test-password',
+                'is_staff': True,
+                'is_superuser': True,
+            },
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        user = User.objects.get(username='attacker@example.com')
+        self.assertFalse(user.is_staff)
+        self.assertFalse(user.is_superuser)
+
+    def test_user_cannot_promote_self_through_me_endpoint(self):
+        user = User.objects.create_user(
+            username='regular@example.com',
+            password='a-valid-test-password',
+        )
+        self.client.force_authenticate(user)
+        response = self.client.patch(
+            reverse('usuario-me'),
+            {'is_staff': True, 'is_superuser': True},
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        user.refresh_from_db()
+        self.assertFalse(user.is_staff)
+        self.assertFalse(user.is_superuser)

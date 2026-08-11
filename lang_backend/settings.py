@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
 from pathlib import Path
+from django.core.exceptions import ImproperlyConfigured
 from dotenv import load_dotenv
 import os
 
@@ -24,13 +25,34 @@ load_dotenv(os.path.join(BASE_DIR, '.env'))
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-zlhhdog8n(7!x&0q31km_yzs_*p3fdb8-je=6e3n9=o-cl)$j@'
-# SECRET_KEY = os.getenv("SECRET_KEY")
+SECRET_KEY = os.getenv('SECRET_KEY')
+if not SECRET_KEY:
+    raise ImproperlyConfigured('Defina SECRET_KEY no ambiente.')
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv('DEBUG', 'False').lower() in ('true', '1', 't')
+IS_PRODUCTION = os.getenv('ENVIRONMENT', 'development').lower() == 'production'
 
-ALLOWED_HOSTS = ["*"]
+if IS_PRODUCTION and (
+    SECRET_KEY.startswith('django-insecure-')
+    or len(SECRET_KEY) < 50
+):
+    raise ImproperlyConfigured(
+        'Use uma SECRET_KEY longa, aleatoria e exclusiva em producao.'
+    )
+
+if IS_PRODUCTION and not os.getenv('ALLOWED_HOSTS'):
+    raise ImproperlyConfigured('Defina ALLOWED_HOSTS em producao.')
+
+# Explicit hosts prevent forged Host headers; configure LAN/domain values in .env.
+ALLOWED_HOSTS = [
+    host.strip()
+    for host in os.getenv(
+        'ALLOWED_HOSTS',
+        'localhost,127.0.0.1,testserver',
+    ).split(',')
+    if host.strip()
+]
 
 GOOGLE_OAUTH_CLIENT_IDS = [
     client_id.strip()
@@ -49,6 +71,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
+    'rest_framework_simplejwt.token_blacklist',
     'drf_spectacular',
     'app',
     'authentication',
@@ -63,14 +86,13 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    "django.middleware.security.SecurityMiddleware",
-    "whitenoise.middleware.WhiteNoiseMiddleware",
 ]
 
 ROOT_URLCONF = 'lang_backend.urls'
@@ -153,9 +175,39 @@ REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ],
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticated',
+    ],
+    'DEFAULT_THROTTLE_CLASSES': [
+        'rest_framework.throttling.AnonRateThrottle',
+        'rest_framework.throttling.UserRateThrottle',
+        'rest_framework.throttling.ScopedRateThrottle',
+    ],
+    'DEFAULT_THROTTLE_RATES': {
+        'anon': '20/minute',
+        'user': '300/minute',
+        'auth': '10/minute',
+    },
+}
+
+SIMPLE_JWT = {
+    'ROTATE_REFRESH_TOKENS': True,
+    'BLACKLIST_AFTER_ROTATION': True,
 }
 
 JWT_REFRESH_COOKIE_NAME = 'refresh_token'
-JWT_REFRESH_COOKIE_SECURE = not DEBUG
+JWT_REFRESH_COOKIE_SECURE = IS_PRODUCTION
 JWT_REFRESH_COOKIE_SAMESITE = 'Lax'
 JWT_REFRESH_COOKIE_MAX_AGE = 60 * 60 * 24 * 7
+
+SECURE_CONTENT_TYPE_NOSNIFF = True
+X_FRAME_OPTIONS = 'DENY'
+
+if IS_PRODUCTION:
+    SECURE_SSL_REDIRECT = True
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+    SECURE_HSTS_SECONDS = int(os.getenv('SECURE_HSTS_SECONDS', '31536000'))
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True

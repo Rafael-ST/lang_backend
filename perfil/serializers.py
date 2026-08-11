@@ -32,6 +32,7 @@ class PerfilSerializer(serializers.ModelSerializer):
         read_only_fields = [
             'id',
             'username',
+            'pontos',
             'average_exercise_set_time_ms',
             'learned_words_count',
             'completed_exercises_count',

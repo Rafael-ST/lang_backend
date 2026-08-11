@@ -1,11 +1,14 @@
-from rest_framework import filters, permissions, viewsets
+from django.db import transaction
+from rest_framework import filters, permissions, status, viewsets
+from rest_framework.decorators import action
+from rest_framework.response import Response
 
 from perfil.models import Perfil
 from perfil.serializers import PerfilSerializer
 from perfil.services import recover_profile_points_for_user
 
 
-class PerfilViewSet(viewsets.ModelViewSet):
+class PerfilViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Perfil.objects.select_related('user').all().order_by('user__username')
     serializer_class = PerfilSerializer
     permission_classes = [permissions.IsAuthenticated]
@@ -37,9 +40,18 @@ class PerfilViewSet(viewsets.ModelViewSet):
 
         return super().retrieve(request, *args, **kwargs)
 
-    def perform_create(self, serializer):
-        if self.request.user.is_staff:
-            serializer.save()
-            return
+    @action(detail=True, methods=['post'], url_path='spend-point')
+    def spend_point(self, request, pk=None):
+        with transaction.atomic():
+            profile = self.get_queryset().select_for_update().get(pk=pk)
 
-        serializer.save(user=self.request.user)
+            if profile.pontos <= 0:
+                return Response(
+                    {'detail': 'Voce nao possui pontos disponiveis.'},
+                    status=status.HTTP_409_CONFLICT,
+                )
+
+            profile.pontos -= 1
+            profile.save(update_fields=['pontos', 'updated_at'])
+
+        return Response(self.get_serializer(profile).data)

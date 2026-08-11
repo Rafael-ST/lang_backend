@@ -41,6 +41,20 @@ class CardApiTests(TestCase):
         self.assertEqual(card.international_name, payload['international_name'])
         self.assertEqual(str(card.categoria.id), payload['categoria'])
 
+    def test_create_card_without_category(self):
+        response = self.client.post(
+            self.card_list_url,
+            {
+                'english_name': 'Uncategorized',
+                'international_name': 'Sem categoria',
+            },
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        card = Card.objects.get(english_name='Uncategorized')
+        self.assertIsNone(card.categoria)
+
     def test_retrieve_card(self):
         card = Card.objects.create(
             english_name='Hello',
@@ -180,6 +194,19 @@ class MarkCardsSeenApiTests(TestCase):
             password='test-password',
         )
         UserCardAccess.objects.create(user=other_user, card=self.card)
+
+        response = self.client.get(reverse('card-seen'))
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data, [])
+
+    def test_does_not_list_seen_card_without_category(self):
+        uncategorized_card = Card.objects.create(
+            english_name='Uncategorized',
+            international_name='Sem categoria',
+            categoria=None,
+        )
+        UserCardAccess.objects.create(user=self.user, card=uncategorized_card)
 
         response = self.client.get(reverse('card-seen'))
 

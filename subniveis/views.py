@@ -3,7 +3,7 @@ from rest_framework import filters, viewsets
 from subniveis.filters import SubNivelFilterBackend
 from subniveis.models import SubNivel
 from subniveis.serializers import SubNivelSerializer
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAdminUser, IsAuthenticated
 
 class SubNivelViewSet(viewsets.ModelViewSet):
     queryset = SubNivel.objects.select_related('subnivel').all().order_by('ordem', 'nome')
@@ -17,3 +17,8 @@ class SubNivelViewSet(viewsets.ModelViewSet):
     search_fields = ['nome', 'subnivel__nome']
     ordering_fields = ['nome', 'ordem', 'subnivel__nome', 'created_at', 'updated_at', 'is_active']
     ordering = ['ordem', 'nome']
+
+    def get_permissions(self):
+        if self.action in {'create', 'update', 'partial_update', 'destroy'}:
+            return [IsAdminUser()]
+        return [IsAuthenticated()]

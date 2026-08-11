@@ -28,16 +28,6 @@ class ExerciseSetViewSet(viewsets.ModelViewSet):
 
         return [IsAuthenticated()]
 
-
-class ExerciseSetImageViewSet(viewsets.ModelViewSet):
-    queryset = ExerciseSetImage.objects.all().order_by('name')
-    serializer_class = ExerciseSetImageSerializer
-    permission_classes = [IsAdminUser]
-    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
-    search_fields = ['name']
-    ordering_fields = ['name', 'created_at', 'updated_at', 'is_active']
-    ordering = ['name']
-
     @action(detail=True, methods=['post'], url_path='reset')
     def reset(self, request, pk=None):
         exercise_set = self.get_object()
@@ -74,7 +64,16 @@ class ExerciseSetImageViewSet(viewsets.ModelViewSet):
         )
 
 
-class ExerciseSetProgressViewSet(viewsets.ModelViewSet):
+class ExerciseSetImageViewSet(viewsets.ModelViewSet):
+    queryset = ExerciseSetImage.objects.all().order_by('name')
+    serializer_class = ExerciseSetImageSerializer
+    permission_classes = [IsAdminUser]
+    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
+    search_fields = ['name']
+    ordering_fields = ['name', 'created_at', 'updated_at', 'is_active']
+    ordering = ['name']
+
+class ExerciseSetProgressViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = ExerciseSetProgressSerializer
     permission_classes = [IsAuthenticated]
     filter_backends = [
@@ -93,6 +92,3 @@ class ExerciseSetProgressViewSet(viewsets.ModelViewSet):
             queryset = queryset.filter(user=self.request.user)
 
         return queryset
-
-    def perform_create(self, serializer):
-        serializer.save(user=self.request.user)

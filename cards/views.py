@@ -67,6 +67,7 @@ class CardViewSet(viewsets.ModelViewSet):
         queryset = (
             Card.objects.filter(
                 is_active=True,
+                categoria__isnull=False,
                 user_accesses__user=request.user,
             )
             .select_related('categoria')
