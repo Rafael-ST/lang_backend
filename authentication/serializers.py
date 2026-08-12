@@ -41,6 +41,20 @@ class GoogleAuthSerializer(serializers.Serializer):
     id_token = serializers.CharField(trim_whitespace=True)
 
 
+class PasswordResetRequestSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+
+
+class PasswordResetConfirmSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+    code = serializers.RegexField(r'^\d{6}$')
+    new_password = serializers.CharField(write_only=True)
+
+    def validate_new_password(self, password):
+        validate_password(password)
+        return password
+
+
 class ProfilePictureUploadSerializer(serializers.Serializer):
     MAX_FILE_SIZE = 5 * 1024 * 1024
     MAX_DIMENSION = 6000

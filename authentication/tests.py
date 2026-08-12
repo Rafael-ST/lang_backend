@@ -5,6 +5,7 @@ from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.core import mail
 from django.test import override_settings
 from django.urls import reverse
 from PIL import Image
@@ -259,3 +260,76 @@ class UserPrivilegeSecurityTests(APITestCase):
         user.refresh_from_db()
         self.assertFalse(user.is_staff)
         self.assertFalse(user.is_superuser)
+
+
+@override_settings(EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend')
+class PasswordResetTests(APITestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username='reset@example.com',
+            email='reset@example.com',
+            password='old-valid-password',
+        )
+
+    def request_code(self):
+        return self.client.post(
+            reverse('password_reset_request'),
+            {'email': self.user.email},
+            format='json',
+        )
+
+    def test_requests_code_without_exposing_account_existence(self):
+        known_response = self.request_code()
+        unknown_response = self.client.post(
+            reverse('password_reset_request'),
+            {'email': 'unknown@example.com'},
+            format='json',
+        )
+
+        self.assertEqual(known_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(unknown_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(known_response.data, unknown_response.data)
+        self.assertEqual(len(mail.outbox), 1)
+
+    def test_confirms_code_and_changes_password_once(self):
+        self.request_code()
+        code = next(
+            part for part in mail.outbox[0].body.split() if part.isdigit()
+        )
+        payload = {
+            'email': self.user.email,
+            'code': code,
+            'new_password': 'new-valid-password-2026',
+        }
+
+        response = self.client.post(
+            reverse('password_reset_confirm'),
+            payload,
+            format='json',
+        )
+        repeated_response = self.client.post(
+            reverse('password_reset_confirm'),
+            payload,
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(repeated_response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.user.refresh_from_db()
+        self.assertTrue(self.user.check_password('new-valid-password-2026'))
+
+    def test_rejects_invalid_code(self):
+        self.request_code()
+        response = self.client.post(
+            reverse('password_reset_confirm'),
+            {
+                'email': self.user.email,
+                'code': '000000',
+                'new_password': 'new-valid-password-2026',
+            },
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.user.refresh_from_db()
+        self.assertTrue(self.user.check_password('old-valid-password'))

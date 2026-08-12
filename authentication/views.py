@@ -1,9 +1,15 @@
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.db import transaction
+from django.db.models import Q
+from django.contrib.auth.hashers import check_password, make_password
+from django.core.mail import send_mail
+from django.utils import timezone
+from datetime import timedelta
+import secrets
 from google.auth.transport.requests import Request as GoogleRequest
 from google.oauth2 import id_token as google_id_token
-from rest_framework import filters, permissions, status, viewsets
+from rest_framework import filters, permissions, serializers, status, viewsets
 from rest_framework.parsers import MultiPartParser
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -15,9 +21,12 @@ from rest_framework_simplejwt.exceptions import TokenError
 from authentication.serializers import (
     CustomTokenObtainPairSerializer,
     GoogleAuthSerializer,
+    PasswordResetConfirmSerializer,
+    PasswordResetRequestSerializer,
     ProfilePictureUploadSerializer,
     UserSerializer,
 )
+from authentication.models import PasswordResetCode
 from perfil.models import DEFAULT_PROFILE_POINTS, Perfil
 
 
@@ -228,6 +237,147 @@ class LogoutView(APIView):
         return response
 
 
+class PasswordResetRequestView(APIView):
+    permission_classes = [permissions.AllowAny]
+    throttle_scope = 'password_reset_request'
+
+    def post(self, request):
+        serializer = PasswordResetRequestSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        email = serializer.validated_data['email'].strip().lower()
+        user = User.objects.filter(
+            Q(email__iexact=email) | Q(username__iexact=email),
+            is_active=True,
+        ).first()
+
+        if user:
+            code = f'{secrets.randbelow(1_000_000):06d}'
+            with transaction.atomic():
+                PasswordResetCode.objects.filter(
+                    user=user,
+                    used_at__isnull=True,
+                    is_active=True,
+                ).update(is_active=False)
+                PasswordResetCode.objects.create(
+                    user=user,
+                    code_hash=make_password(code),
+                    expires_at=timezone.now() + timedelta(minutes=15),
+                )
+
+            try:
+                sent_count = send_mail(
+                    subject='Código para redefinir sua senha no Lang',
+                    message=(
+                        f'Seu código de redefinição é: {code}\n\n'
+                        'Ele expira em 15 minutos. Se você não solicitou esta '
+                        'alteração, ignore esta mensagem.'
+                    ),
+                    from_email=settings.DEFAULT_FROM_EMAIL,
+                    recipient_list=[email],
+                    fail_silently=False,
+                )
+                if sent_count == 1:
+                    print(
+                        '[password-reset] E-mail enviado com sucesso '
+                        f'(user_id={user.pk}).',
+                        flush=True,
+                    )
+                else:
+                    print(
+                        '[password-reset] E-mail não enviado: o backend de '
+                        f'e-mail retornou {sent_count} envios (user_id={user.pk}).',
+                        flush=True,
+                    )
+            except Exception as exc:
+                print(
+                    '[password-reset] Falha ao enviar e-mail '
+                    f'(user_id={user.pk}): {type(exc).__name__}: {exc}',
+                    flush=True,
+                )
+        else:
+            print(
+                '[password-reset] Nenhum e-mail enviado: usuário ativo '
+                'não encontrado.',
+                flush=True,
+            )
+
+        return Response(
+            {
+                'detail': (
+                    'Se o e-mail estiver cadastrado, enviaremos um código '
+                    'de redefinição.'
+                ),
+            },
+            status=status.HTTP_200_OK,
+        )
+
+
+class PasswordResetConfirmView(APIView):
+    permission_classes = [permissions.AllowAny]
+    throttle_scope = 'password_reset_confirm'
+
+    def post(self, request):
+        serializer = PasswordResetConfirmSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        email = serializer.validated_data['email'].strip().lower()
+
+        with transaction.atomic():
+            reset_code = (
+                PasswordResetCode.objects.select_for_update()
+                .select_related('user')
+                .filter(
+                    Q(user__email__iexact=email) |
+                    Q(user__username__iexact=email),
+                    used_at__isnull=True,
+                    is_active=True,
+                )
+                .order_by('-created_at')
+                .first()
+            )
+
+            if (
+                not reset_code
+                or reset_code.expires_at <= timezone.now()
+                or reset_code.attempts >= 5
+            ):
+                raise serializers.ValidationError({
+                    'code': 'Código inválido ou expirado.'
+                })
+
+            if not check_password(
+                serializer.validated_data['code'],
+                reset_code.code_hash,
+            ):
+                reset_code.attempts += 1
+                if reset_code.attempts >= 5:
+                    reset_code.is_active = False
+                reset_code.save(
+                    update_fields=['attempts', 'is_active', 'updated_at']
+                )
+                raise serializers.ValidationError({
+                    'code': 'Código inválido ou expirado.'
+                })
+
+            user = reset_code.user
+            user.set_password(serializer.validated_data['new_password'])
+            user.save(update_fields=['password'])
+            reset_code.used_at = timezone.now()
+            reset_code.is_active = False
+            reset_code.save(
+                update_fields=['used_at', 'is_active', 'updated_at']
+            )
+            PasswordResetCode.objects.filter(
+                user=user,
+                used_at__isnull=True,
+                is_active=True,
+            ).exclude(pk=reset_code.pk).update(is_active=False)
+
+        return Response(
+            {'detail': 'Senha redefinida com sucesso.'},
+            status=status.HTTP_200_OK,
+        )
+
+
 class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all().order_by('username')
     serializer_class = UserSerializer
@@ -239,7 +389,6 @@ class UserViewSet(viewsets.ModelViewSet):
     search_fields = ['username', 'email', 'first_name', 'last_name']
     ordering_fields = ['username', 'email', 'first_name', 'last_name', 'date_joined', 'last_login', 'is_active']
     ordering = ['username']
-    throttle_scope = 'auth'
 
     def get_permissions(self):
         if self.action == 'create':
