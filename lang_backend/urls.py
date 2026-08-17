@@ -7,11 +7,25 @@ from django.conf.urls.static import static
 
 from drf_spectacular.views import SpectacularAPIView, SpectacularRedocView, SpectacularSwaggerView
 from rest_framework.permissions import IsAdminUser
-from app.views import PrivacyPolicyView
+from app.views import (
+    AccountDeletionConfirmView,
+    AccountDeletionRequestView,
+    PrivacyPolicyView,
+)
 
 
 urlpatterns = [
     path('politica-de-privacidade/', PrivacyPolicyView.as_view(), name='privacy-policy'),
+    path(
+        'solicitar-exclusao-conta/',
+        AccountDeletionRequestView.as_view(),
+        name='account-deletion-request',
+    ),
+    path(
+        'confirmar-exclusao-conta/<uuid:request_id>/',
+        AccountDeletionConfirmView.as_view(),
+        name='account-deletion-confirm',
+    ),
     path('exercise-builder/login/', TemplateView.as_view(template_name='exercicio/exercise_builder_login.html'), name='exercise-builder-login'),
     path('exercise-builder/', TemplateView.as_view(template_name='exercicio/exercise_builder.html'), name='exercise-builder'),
     path('admin/', admin.site.urls),
