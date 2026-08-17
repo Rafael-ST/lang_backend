@@ -14,6 +14,25 @@ from authentication.models import AccountDeletionRequest
 User = get_user_model()
 
 
+class HomeViewTests(TestCase):
+    @override_settings(PRIVACY_CONTACT_EMAIL='contato@example.com')
+    def test_home_is_public_and_links_to_legal_pages(self):
+        response = self.client.get(reverse('home'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Aprenda inglês')
+        self.assertContains(response, 'praticando de verdade.')
+        self.assertContains(response, 'mobile-menu-panel')
+        self.assertContains(response, 'Recursos')
+        self.assertContains(response, 'Habilidades')
+        self.assertContains(response, reverse('privacy-policy'))
+        self.assertContains(response, reverse('account-deletion-request'))
+        self.assertContains(response, 'contato@example.com')
+        self.assertContains(response, 'class="site-header"')
+        self.assertContains(response, 'class="site-footer"')
+        self.assertContains(response, '/static/app/images/capi.png')
+
+
 class PrivacyPolicyViewTests(TestCase):
     @override_settings(PRIVACY_CONTACT_EMAIL='privacidade@example.com')
     def test_privacy_policy_is_public_and_displays_contact(self):
@@ -23,6 +42,8 @@ class PrivacyPolicyViewTests(TestCase):
         self.assertContains(response, 'Política de Privacidade')
         self.assertContains(response, 'privacidade@example.com')
         self.assertContains(response, 'Exclusão da conta')
+        self.assertContains(response, 'class="site-header"')
+        self.assertContains(response, 'class="site-footer"')
 
 
 @override_settings(
@@ -44,6 +65,8 @@ class AccountDeletionRequestViewTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'Excluir minha conta')
+        self.assertContains(response, 'class="site-header"')
+        self.assertContains(response, 'class="site-footer"')
 
     def test_known_account_receives_confirmation_without_exposing_account(self):
         response = self.client.post(

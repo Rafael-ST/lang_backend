@@ -1,0 +1,638 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="Lang é um aplicativo para aprender inglês com exercícios de leitura, compreensão auditiva, fala e revisão de vocabulário."
+    />
+    <meta name="theme-color" content="#f4efe6" />
+    <meta name="robots" content="index, follow" />
+    {% include 'app/_site_icons.html' %}
+    <title>Lang | Inglês com prática todos os dias</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --background: #f4efe6;
+        --surface: #fffdf8;
+        --surface-strong: #ffffff;
+        --text: #26231f;
+        --muted: #665f56;
+        --border: #ded5c8;
+        --accent: #256f61;
+        --accent-dark: #164b41;
+        --accent-soft: #dcece7;
+        --gold: #e9b949;
+        --shadow: 0 20px 55px rgba(55, 45, 35, 0.1);
+      }
+
+      * { box-sizing: border-box; }
+      html { scroll-behavior: smooth; }
+
+      body {
+        margin: 0;
+        background: var(--background);
+        color: var(--text);
+        font-family: Inter, ui-sans-serif, system-ui, -apple-system,
+          BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.6;
+      }
+
+      a { color: inherit; }
+
+      .container {
+        width: min(100% - 36px, 1120px);
+        margin-inline: auto;
+      }
+
+      .site-header {
+        position: sticky;
+        top: 0;
+        z-index: 20;
+        border-bottom: 1px solid rgba(222, 213, 200, 0.8);
+        background: rgba(244, 239, 230, 0.92);
+        backdrop-filter: blur(14px);
+      }
+
+      .nav {
+        min-height: 74px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 24px;
+      }
+
+      .logo {
+        display: inline-flex;
+        align-items: center;
+        gap: 12px;
+        color: var(--accent-dark);
+        font-size: 22px;
+        font-weight: 900;
+        letter-spacing: -0.03em;
+        text-decoration: none;
+      }
+
+      .logo-mark {
+        width: 46px;
+        height: 46px;
+        display: grid;
+        place-items: center;
+        border-radius: 14px;
+        overflow: hidden;
+        background: transparent;
+      }
+
+      .logo-mark img {
+        width: 100%;
+        height: 100%;
+        display: block;
+        object-fit: cover;
+        transform: scale(1.16);
+      }
+
+      .nav-links {
+        display: flex;
+        align-items: center;
+        gap: 26px;
+        color: var(--muted);
+        font-size: 14px;
+        font-weight: 750;
+      }
+
+      .nav-links a { text-decoration: none; }
+      .nav-links a:hover { color: var(--accent); }
+
+      .mobile-menu { display: none; position: relative; }
+
+      .mobile-menu summary {
+        width: 44px;
+        height: 44px;
+        display: grid;
+        place-items: center;
+        padding: 0;
+        border: 1px solid var(--border);
+        border-radius: 13px;
+        background: var(--surface);
+        color: var(--accent-dark);
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: 850;
+        list-style: none;
+        user-select: none;
+      }
+
+      .mobile-menu summary::-webkit-details-marker { display: none; }
+
+      .menu-icon {
+        width: 17px;
+        display: grid;
+        gap: 3px;
+      }
+
+      .menu-icon span {
+        width: 100%;
+        height: 2px;
+        border-radius: 99px;
+        background: currentColor;
+      }
+
+      .mobile-menu[open] summary {
+        border-color: var(--accent);
+        background: var(--accent-soft);
+      }
+
+      .mobile-menu-panel {
+        position: absolute;
+        top: calc(100% + 10px);
+        right: 0;
+        width: min(280px, calc(100vw - 36px));
+        overflow: hidden;
+        padding: 8px;
+        border: 1px solid var(--border);
+        border-radius: 18px;
+        background: var(--surface-strong);
+        box-shadow: var(--shadow);
+      }
+
+      .mobile-menu-panel a {
+        min-height: 48px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 14px;
+        border-radius: 11px;
+        color: var(--text);
+        font-size: 15px;
+        font-weight: 750;
+        text-decoration: none;
+      }
+
+      .mobile-menu-panel a::after {
+        content: "›";
+        color: var(--accent);
+        font-size: 22px;
+        font-weight: 500;
+      }
+
+      .mobile-menu-panel a:hover,
+      .mobile-menu-panel a:focus-visible {
+        background: var(--accent-soft);
+        outline: none;
+      }
+
+      .hero {
+        min-height: calc(100vh - 74px);
+        display: grid;
+        grid-template-columns: 1.1fr 0.9fr;
+        align-items: center;
+        gap: clamp(42px, 8vw, 100px);
+        padding-block: 72px;
+      }
+
+      .eyebrow {
+        display: inline-flex;
+        align-items: center;
+        gap: 9px;
+        margin: 0 0 20px;
+        padding: 8px 13px;
+        border-radius: 999px;
+        background: var(--accent-soft);
+        color: var(--accent-dark);
+        font-size: 12px;
+        font-weight: 850;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .eyebrow-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: var(--accent);
+      }
+
+      h1 {
+        max-width: 720px;
+        margin: 0;
+        font-size: clamp(44px, 7vw, 78px);
+        line-height: 0.98;
+        letter-spacing: -0.055em;
+      }
+
+      .accent-text { color: var(--accent); }
+
+      .hero-copy {
+        max-width: 610px;
+        margin: 26px 0 0;
+        color: var(--muted);
+        font-size: clamp(17px, 2vw, 20px);
+      }
+
+      .hero-actions {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 14px;
+        margin-top: 32px;
+      }
+
+      .button {
+        min-height: 52px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0 22px;
+        border-radius: 15px;
+        font-weight: 850;
+        text-decoration: none;
+      }
+
+      .button-primary {
+        background: var(--text);
+        color: white;
+        box-shadow: 0 14px 28px rgba(38, 35, 31, 0.17);
+      }
+
+      .button-secondary {
+        border: 1px solid var(--border);
+        background: var(--surface);
+        color: var(--accent-dark);
+      }
+
+      .availability {
+        margin-top: 17px;
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .phone-wrap { position: relative; display: grid; place-items: center; }
+
+      .orb {
+        position: absolute;
+        width: min(42vw, 440px);
+        aspect-ratio: 1;
+        border-radius: 50%;
+        background: var(--accent-soft);
+        filter: blur(2px);
+      }
+
+      .phone {
+        position: relative;
+        width: min(100%, 330px);
+        padding: 12px;
+        border: 2px solid #393630;
+        border-radius: 42px;
+        background: #24221f;
+        box-shadow: 0 35px 70px rgba(50, 43, 34, 0.23);
+        transform: rotate(2.5deg);
+      }
+
+      .screen {
+        min-height: 570px;
+        overflow: hidden;
+        padding: 28px 18px 20px;
+        border-radius: 31px;
+        background: var(--background);
+      }
+
+      .screen-top {
+        display: flex;
+        justify-content: space-between;
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 800;
+      }
+
+      .progress {
+        height: 12px;
+        margin-top: 16px;
+        overflow: hidden;
+        border-radius: 99px;
+        background: #e4ddd2;
+      }
+
+      .progress::after {
+        content: "";
+        display: block;
+        width: 68%;
+        height: 100%;
+        border-radius: inherit;
+        background: linear-gradient(90deg, #256f61, #54a28e);
+      }
+
+      .exercise-card {
+        margin-top: 24px;
+        padding: 24px 20px;
+        border: 1px solid var(--border);
+        border-radius: 24px;
+        background: var(--surface-strong);
+        box-shadow: 0 16px 35px rgba(55, 45, 35, 0.08);
+        text-align: center;
+      }
+
+      .exercise-visual {
+        height: 190px;
+        display: grid;
+        place-items: center;
+        border-radius: 18px;
+        background: linear-gradient(145deg, #dcece7, #f0deba);
+        font-size: 70px;
+      }
+
+      .exercise-label {
+        margin: 21px 0 4px;
+        color: var(--accent);
+        font-size: 12px;
+        font-weight: 850;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .exercise-word { margin: 0; font-size: 30px; font-weight: 900; }
+      .exercise-translation { margin: 4px 0 0; color: var(--muted); }
+
+      .fake-button {
+        min-height: 50px;
+        display: grid;
+        place-items: center;
+        margin-top: 20px;
+        border-radius: 15px;
+        background: var(--text);
+        color: white;
+        font-size: 14px;
+        font-weight: 850;
+      }
+
+      .section { padding-block: 96px; }
+
+      .section-heading {
+        max-width: 690px;
+        margin-bottom: 42px;
+      }
+
+      .section-kicker {
+        margin: 0 0 10px;
+        color: var(--accent);
+        font-size: 13px;
+        font-weight: 850;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+      }
+
+      h2 {
+        margin: 0;
+        font-size: clamp(34px, 5vw, 52px);
+        line-height: 1.1;
+        letter-spacing: -0.04em;
+      }
+
+      .section-description {
+        margin: 17px 0 0;
+        color: var(--muted);
+        font-size: 18px;
+      }
+
+      .feature-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 20px;
+      }
+
+      .feature {
+        padding: 30px;
+        border: 1px solid var(--border);
+        border-radius: 24px;
+        background: var(--surface);
+        box-shadow: var(--shadow);
+      }
+
+      .feature-icon {
+        width: 52px;
+        height: 52px;
+        display: grid;
+        place-items: center;
+        border-radius: 16px;
+        background: var(--accent-soft);
+        font-size: 25px;
+      }
+
+      .feature h3 { margin: 22px 0 9px; font-size: 21px; }
+      .feature p { margin: 0; color: var(--muted); }
+
+      .skills-panel {
+        display: grid;
+        grid-template-columns: 0.9fr 1.1fr;
+        gap: 48px;
+        align-items: center;
+        padding: clamp(32px, 7vw, 70px);
+        border-radius: 34px;
+        background: var(--accent-dark);
+        color: white;
+        box-shadow: 0 28px 70px rgba(22, 75, 65, 0.25);
+      }
+
+      .skills-panel h2 { max-width: 430px; }
+      .skills-panel .section-kicker { color: #95d2c3; }
+      .skills-panel p { color: #c8dfd9; }
+
+      .skill-list { display: grid; gap: 13px; }
+
+      .skill-row {
+        display: grid;
+        grid-template-columns: 48px 1fr;
+        gap: 15px;
+        align-items: center;
+        padding: 17px;
+        border: 1px solid rgba(255,255,255,0.14);
+        border-radius: 18px;
+        background: rgba(255,255,255,0.08);
+      }
+
+      .skill-number {
+        width: 42px;
+        height: 42px;
+        display: grid;
+        place-items: center;
+        border-radius: 13px;
+        background: rgba(255,255,255,0.13);
+        color: #bce5db;
+        font-weight: 900;
+      }
+
+      .skill-row strong { display: block; font-size: 17px; }
+      .skill-row span { color: #c8dfd9; font-size: 14px; }
+
+      .cta {
+        padding: clamp(38px, 8vw, 78px);
+        border: 1px solid var(--border);
+        border-radius: 34px;
+        background: var(--surface);
+        box-shadow: var(--shadow);
+        text-align: center;
+      }
+
+      .cta h2 { max-width: 740px; margin-inline: auto; }
+      .cta p { max-width: 600px; margin: 18px auto 0; color: var(--muted); font-size: 18px; }
+
+      .site-footer {
+        margin-top: 88px;
+        padding: 38px 0;
+        border-top: 1px solid var(--border);
+        color: var(--muted);
+        font-size: 14px;
+      }
+
+      .footer-grid {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 20px;
+      }
+
+      .footer-links { display: flex; flex-wrap: wrap; gap: 20px; }
+      .footer-links a { color: var(--muted); }
+
+      @media (max-width: 850px) {
+        .hero { grid-template-columns: 1fr; text-align: center; }
+        .hero-copy { margin-inline: auto; }
+        .hero-actions { justify-content: center; }
+        .phone { transform: none; }
+        .orb { width: min(85vw, 440px); }
+        .feature-grid { grid-template-columns: 1fr; }
+        .skills-panel { grid-template-columns: 1fr; }
+      }
+
+      @media (max-width: 640px) {
+        .nav-links { display: none; }
+        .mobile-menu { display: block; }
+        .hero { padding-block: 50px 72px; }
+        .section { padding-block: 70px; }
+        .screen { min-height: 535px; }
+        .footer-grid { align-items: flex-start; flex-direction: column; }
+      }
+    </style>
+  </head>
+  <body>
+    {% include 'app/_site_header.html' %}
+
+    <main id="inicio">
+      <section class="container hero">
+        <div>
+          <p class="eyebrow"><span class="eyebrow-dot"></span> Inglês no seu ritmo</p>
+          <h1>
+            Aprenda inglês <span class="accent-text">praticando de verdade.</span>
+          </h1>
+          <p class="hero-copy">
+            Exercícios curtos de leitura, compreensão auditiva e fala, com
+            vocabulário organizado para você evoluir um pouco todos os dias.
+          </p>
+          <div class="hero-actions">
+            <a class="button button-primary" href="#recursos">Conheça o Lang</a>
+            <a class="button button-secondary" href="{% url 'privacy-policy' %}">
+              Como cuidamos dos seus dados
+            </a>
+          </div>
+          <p class="availability">Aplicativo para Android · lançamento em breve</p>
+        </div>
+
+        <div class="phone-wrap" aria-label="Exemplo de exercício no aplicativo Lang">
+          <div class="orb"></div>
+          <div class="phone">
+            <div class="screen">
+              <div class="screen-top"><span>Vocabulário</span><span>7 de 10</span></div>
+              <div class="progress"></div>
+              <div class="exercise-card">
+                <div class="exercise-visual" aria-hidden="true">☀️</div>
+                <p class="exercise-label">Ouça e aprenda</p>
+                <p class="exercise-word">Sunny</p>
+                <p class="exercise-translation">Ensolarado</p>
+              </div>
+              <div class="fake-button">Próximo card</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="recursos">
+        <div class="container">
+          <div class="section-heading">
+            <p class="section-kicker">Aprendizado completo</p>
+            <h2>Mais formas de praticar, menos monotonia.</h2>
+            <p class="section-description">
+              O Lang combina áudio, imagens, textos e fala para reforçar o
+              vocabulário em contextos diferentes.
+            </p>
+          </div>
+          <div class="feature-grid">
+            <article class="feature">
+              <div class="feature-icon" aria-hidden="true">🎧</div>
+              <h3>Ouça e reconheça</h3>
+              <p>Treine a compreensão com áudios, imagens e exercícios de completar.</p>
+            </article>
+            <article class="feature">
+              <div class="feature-icon" aria-hidden="true">💬</div>
+              <h3>Fale em inglês</h3>
+              <p>Pratique pronúncia a partir de textos em inglês ou português.</p>
+            </article>
+            <article class="feature">
+              <div class="feature-icon" aria-hidden="true">🗂️</div>
+              <h3>Revise seus cards</h3>
+              <p>Reencontre palavras já vistas, organizadas por categoria.</p>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="habilidades">
+        <div class="container skills-panel">
+          <div>
+            <p class="section-kicker">Três habilidades</p>
+            <h2>Entenda, leia e fale com confiança.</h2>
+            <p class="section-description">
+              Cada conjunto de exercícios trabalha habilidades específicas e
+              registra seu progresso ao longo do caminho.
+            </p>
+          </div>
+          <div class="skill-list">
+            <div class="skill-row">
+              <div class="skill-number">01</div>
+              <div><strong>Listening</strong><span>Compreensão do inglês falado.</span></div>
+            </div>
+            <div class="skill-row">
+              <div class="skill-number">02</div>
+              <div><strong>Reading</strong><span>Leitura, associação e vocabulário.</span></div>
+            </div>
+            <div class="skill-row">
+              <div class="skill-number">03</div>
+              <div><strong>Speaking</strong><span>Prática ativa com reconhecimento de voz.</span></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="container cta">
+          <p class="section-kicker">Evolução contínua</p>
+          <h2>Seu progresso acompanha você em cada exercício.</h2>
+          <p>
+            Veja palavras aprendidas, exercícios concluídos e continue sempre
+            do próximo conteúdo disponível.
+          </p>
+          <div class="hero-actions" style="justify-content: center">
+            <a class="button button-primary" href="{% url 'privacy-policy' %}">
+              Política de Privacidade
+            </a>
+            <a class="button button-secondary" href="{% url 'account-deletion-request' %}">
+              Solicitar exclusão de conta
+            </a>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    {% include 'app/_site_footer.html' %}
+  </body>
+</html>

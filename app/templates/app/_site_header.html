@@ -1,0 +1,29 @@
+{% load static %}
+<header class="site-header">
+  <nav class="container nav" aria-label="Navegação principal">
+    <a class="logo" href="{% url 'home' %}" aria-label="Lang - início">
+      <span class="logo-mark">
+        <img src="{% static 'app/images/capi.png' %}" alt="" />
+      </span>
+      Lang
+    </a>
+    <div class="nav-links">
+      <a href="{% url 'home' %}#recursos">Recursos</a>
+      <a href="{% url 'home' %}#habilidades">Habilidades</a>
+      <a href="{% url 'privacy-policy' %}">Privacidade</a>
+    </div>
+    <details class="mobile-menu">
+      <summary aria-label="Abrir menu de navegação" title="Abrir menu">
+        <span class="menu-icon" aria-hidden="true">
+          <span></span><span></span><span></span>
+        </span>
+      </summary>
+      <div class="mobile-menu-panel">
+        <a href="{% url 'home' %}#recursos">Recursos</a>
+        <a href="{% url 'home' %}#habilidades">Habilidades</a>
+        <a href="{% url 'privacy-policy' %}">Política de Privacidade</a>
+        <a href="{% url 'account-deletion-request' %}">Exclusão de conta</a>
+      </div>
+    </details>
+  </nav>
+</header>

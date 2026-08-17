@@ -1,0 +1,21 @@
+{% load static %}
+<footer class="site-footer">
+  <div class="container footer-grid">
+    <div>
+      <a class="logo" href="{% url 'home' %}">
+        <span class="logo-mark">
+          <img src="{% static 'app/images/capi.png' %}" alt="" />
+        </span>
+        Lang
+      </a>
+      <div class="copyright">© 2026 Lang. Todos os direitos reservados.</div>
+    </div>
+    <div class="footer-links">
+      <a href="{% url 'privacy-policy' %}">Política de Privacidade</a>
+      <a href="{% url 'account-deletion-request' %}">Exclusão de conta</a>
+      {% if contact_email %}
+        <a href="mailto:{{ contact_email }}">Contato</a>
+      {% endif %}
+    </div>
+  </div>
+</footer>

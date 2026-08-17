@@ -8,6 +8,7 @@
       content="Política de Privacidade do aplicativo Lang."
     />
     <meta name="robots" content="index, follow" />
+    {% include 'app/_site_icons.html' %}
     <title>Política de Privacidade | Lang</title>
     <style>
       :root {
@@ -60,6 +61,7 @@
         font-size: 14px;
         font-weight: 800;
         letter-spacing: 0.12em;
+        text-decoration: none;
         text-transform: uppercase;
       }
 
@@ -159,12 +161,15 @@
         .page { width: min(100% - 20px, 900px); padding-top: 10px; }
         .hero, .content { border-radius: 22px; }
       }
+
+      {% include 'app/_site_chrome_styles.html' %}
     </style>
   </head>
   <body>
+    {% include 'app/_site_header.html' %}
     <main class="page">
       <header class="hero">
-        <p class="brand"><span class="brand-mark"></span> Lang</p>
+        <a class="brand" href="{% url 'home' %}"><span class="brand-mark"></span> Lang</a>
         <h1>Política de Privacidade</h1>
         <p class="intro">
           Esta política explica quais dados o aplicativo Lang trata, por que
@@ -377,7 +382,7 @@
         </section>
       </article>
 
-      <footer>© 2026 Lang. Todos os direitos reservados.</footer>
     </main>
+    {% include 'app/_site_footer.html' %}
   </body>
 </html>

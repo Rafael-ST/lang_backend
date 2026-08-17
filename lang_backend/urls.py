@@ -10,11 +10,13 @@ from rest_framework.permissions import IsAdminUser
 from app.views import (
     AccountDeletionConfirmView,
     AccountDeletionRequestView,
+    HomeView,
     PrivacyPolicyView,
 )
 
 
 urlpatterns = [
+    path('', HomeView.as_view(), name='home'),
     path('politica-de-privacidade/', PrivacyPolicyView.as_view(), name='privacy-policy'),
     path(
         'solicitar-exclusao-conta/',

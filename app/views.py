@@ -25,18 +25,33 @@ logger = logging.getLogger(__name__)
 User = get_user_model()
 
 
+class HomeView(TemplateView):
+    template_name = 'app/home.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['contact_email'] = settings.PRIVACY_CONTACT_EMAIL
+        return context
+
+
 class PrivacyPolicyView(TemplateView):
     template_name = 'app/privacy_policy.html'
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['privacy_contact_email'] = settings.PRIVACY_CONTACT_EMAIL
+        context['contact_email'] = settings.PRIVACY_CONTACT_EMAIL
         return context
 
 
 class AccountDeletionRequestView(FormView):
     form_class = AccountDeletionRequestForm
     template_name = 'app/account_deletion_request.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['contact_email'] = settings.PRIVACY_CONTACT_EMAIL
+        return context
 
     def form_valid(self, form):
         if form.cleaned_data['website']:
@@ -128,7 +143,10 @@ class AccountDeletionRequestView(FormView):
         return render(
             self.request,
             self.template_name,
-            {'request_submitted': True},
+            {
+                'request_submitted': True,
+                'contact_email': settings.PRIVACY_CONTACT_EMAIL,
+            },
         )
 
 
@@ -140,6 +158,7 @@ class AccountDeletionConfirmView(View):
         return render(request, self.template_name, {
             'deletion_request': deletion_request,
             'token': request.GET.get('token'),
+            'contact_email': settings.PRIVACY_CONTACT_EMAIL,
         })
 
     def post(self, request, request_id):
@@ -157,7 +176,10 @@ class AccountDeletionConfirmView(View):
             )
 
         self._notify_privacy_contact(deletion_request)
-        return render(request, self.template_name, {'confirmed': True})
+        return render(request, self.template_name, {
+            'confirmed': True,
+            'contact_email': settings.PRIVACY_CONTACT_EMAIL,
+        })
 
     def _get_valid_request(self, request_id, token, for_update=False):
         queryset = AccountDeletionRequest.objects

@@ -8,6 +8,7 @@
       name="description"
       content="Solicite a exclusão da sua conta e dos dados associados no Lang."
     />
+    {% include 'app/_site_icons.html' %}
     <title>Solicitar exclusão da conta | Lang</title>
     <style>
       :root {
@@ -141,9 +142,12 @@
         .page { padding-top: 10px; }
         .card { border-radius: 22px; }
       }
+
+      {% include 'app/_site_chrome_styles.html' %}
     </style>
   </head>
   <body>
+    {% include 'app/_site_header.html' %}
     <main class="page">
       <section class="card">
         <p class="brand">Lang · Privacidade</p>
@@ -194,10 +198,7 @@
           </form>
         {% endif %}
       </section>
-      <p class="footer">
-        <a href="{% url 'privacy-policy' %}">Política de Privacidade</a>
-        · © 2026 Lang
-      </p>
     </main>
+    {% include 'app/_site_footer.html' %}
   </body>
 </html>
