@@ -203,6 +203,7 @@ JWT_REFRESH_COOKIE_SAMESITE = 'Lax'
 JWT_REFRESH_COOKIE_MAX_AGE = 60 * 60 * 24 * 7
 
 DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'no-reply@lang.local')
+PRIVACY_CONTACT_EMAIL = os.getenv('PRIVACY_CONTACT_EMAIL', '').strip()
 EMAIL_BACKEND = os.getenv(
     'EMAIL_BACKEND',
     'django.core.mail.backends.console.EmailBackend',
