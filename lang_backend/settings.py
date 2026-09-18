@@ -170,6 +170,32 @@ STATIC_ROOT = BASE_DIR / "staticfiles"
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
+# Uploaded media lives in a private S3-compatible bucket (Railway).
+# Keep the existing FileField names as object keys, without a "media/" prefix.
+STORAGES = {
+    'default': {
+        'BACKEND': 'storages.backends.s3.S3Storage',
+        'OPTIONS': {
+            'bucket_name': os.getenv('AWS_STORAGE_BUCKET_NAME', ''),
+            'access_key': os.getenv('AWS_ACCESS_KEY_ID', ''),
+            'secret_key': os.getenv('AWS_SECRET_ACCESS_KEY', ''),
+            'endpoint_url': os.getenv('AWS_S3_ENDPOINT_URL') or None,
+            'region_name': os.getenv('AWS_S3_REGION_NAME') or 'auto',
+            'signature_version': 's3v4',
+            'addressing_style': 'path',
+            'default_acl': None,
+            'querystring_auth': True,
+            'querystring_expire': 3600,
+            'file_overwrite': False,
+            'custom_domain': None,
+            'location': '',
+        },
+    },
+    'staticfiles': {
+        'BACKEND': 'whitenoise.storage.CompressedStaticFilesStorage',
+    },
+}
+
 REST_FRAMEWORK = {
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
     'DEFAULT_AUTHENTICATION_CLASSES': [

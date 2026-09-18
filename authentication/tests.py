@@ -96,6 +96,14 @@ class CurrentUserViewTests(APITestCase):
         self.media_directory = TemporaryDirectory()
         self.media_override = override_settings(
             MEDIA_ROOT=self.media_directory.name,
+            STORAGES={
+                'default': {
+                    'BACKEND': 'django.core.files.storage.FileSystemStorage',
+                },
+                'staticfiles': {
+                    'BACKEND': 'django.contrib.staticfiles.storage.StaticFilesStorage',
+                },
+            },
         )
         self.media_override.enable()
         self.addCleanup(self.media_override.disable)

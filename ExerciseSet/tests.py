@@ -1,7 +1,7 @@
 from io import BytesIO
 
 from django.core.files.uploadedfile import SimpleUploadedFile
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from PIL import Image
 
 from ExerciseSet.models import ExerciseSet, ExerciseSetImage
@@ -9,6 +9,12 @@ from ExerciseSet.serializers import ExerciseSetImageSerializer, ExerciseSetSeria
 from niveis.models import Nivel
 from subniveis.models import SubNivel
 
+@override_settings(STORAGES={
+    'default': {'BACKEND': 'django.core.files.storage.InMemoryStorage'},
+    'staticfiles': {
+        'BACKEND': 'django.contrib.staticfiles.storage.StaticFilesStorage',
+    },
+})
 class ExerciseSetImageSerializerTests(TestCase):
     def setUp(self):
         level = Nivel.objects.create(nome='A1')
