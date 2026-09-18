@@ -1,10 +1,13 @@
 # Imagens e audios no Railway Bucket
 
-O armazenamento padrao de FileField/ImageField usa django-storages com S3.
+Com `DEBUG=False`, FileField/ImageField usa django-storages com S3.
+Com `DEBUG=True`, usa a pasta local `media/`, servida pelo Django em `/media/`,
+sem acessar o bucket e sem precisar de credenciais AWS.
 Os arquivos estaticos continuam no WhiteNoise, gerados durante o build por
 `python manage.py collectstatic --noinput`.
 
-Preencha no `.env` local e nas Variables do servico Django:
+Preencha nas Variables do servico Django no Railway (ou no `.env` apenas
+se quiser testar localmente com `DEBUG=False`):
 
 | Variavel Django | Credencial do bucket Railway |
 | --- | --- |
@@ -18,9 +21,9 @@ No Railway, use referencias ao servico do bucket, por exemplo
 `${{lang-media.BUCKET}}`, se ele se chamar `lang-media`.
 Nunca envie o `.env` ao GitHub. As credenciais pertencem apenas ao backend.
 
-`DEBUG=False` foi definido localmente e nos exemplos. O armazenamento S3
-funciona independentemente de DEBUG. Sem as credenciais, o servidor pode
-iniciar, mas uploads e URLs de arquivos nao funcionarao.
+O `.env` local e os exemplos usam `DEBUG=True`. No Railway, mantenha
+`DEBUG=False` e `ENVIRONMENT=production`. Nesse modo, sem as credenciais,
+o servidor pode iniciar, mas uploads e URLs de arquivos nao funcionarao.
 
 Os links sao assinados e expiram em uma hora. Consulte novamente a API para
 obter links novos; nao grave URLs assinadas em campos JSON ou no banco.

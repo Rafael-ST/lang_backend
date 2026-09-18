@@ -170,7 +170,7 @@ STATIC_ROOT = BASE_DIR / "staticfiles"
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
-# Uploaded media lives in a private S3-compatible bucket (Railway).
+# Production media lives in a private S3-compatible bucket (Railway).
 # Keep the existing FileField names as object keys, without a "media/" prefix.
 STORAGES = {
     'default': {
@@ -195,6 +195,11 @@ STORAGES = {
         'BACKEND': 'whitenoise.storage.CompressedStaticFilesStorage',
     },
 }
+
+if DEBUG:
+    STORAGES['default'] = {
+        'BACKEND': 'django.core.files.storage.FileSystemStorage',
+    }
 
 REST_FRAMEWORK = {
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
