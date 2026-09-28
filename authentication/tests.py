@@ -6,6 +6,7 @@ from unittest.mock import patch
 from django.contrib.auth import get_user_model
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core import mail
+from django.core.cache import cache
 from django.test import override_settings
 from django.urls import reverse
 from PIL import Image
@@ -273,6 +274,7 @@ class UserPrivilegeSecurityTests(APITestCase):
 @override_settings(EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend')
 class PasswordResetTests(APITestCase):
     def setUp(self):
+        cache.clear()
         self.user = User.objects.create_user(
             username='reset@example.com',
             email='reset@example.com',
@@ -325,6 +327,20 @@ class PasswordResetTests(APITestCase):
         self.assertEqual(repeated_response.status_code, status.HTTP_400_BAD_REQUEST)
         self.user.refresh_from_db()
         self.assertTrue(self.user.check_password('new-valid-password-2026'))
+        self.assertFalse(self.user.check_password('old-valid-password'))
+
+        old_login = self.client.post(
+            reverse('token_obtain_pair'),
+            {'username': self.user.username, 'password': 'old-valid-password'},
+            format='json',
+        )
+        new_login = self.client.post(
+            reverse('token_obtain_pair'),
+            {'username': self.user.username, 'password': payload['new_password']},
+            format='json',
+        )
+        self.assertEqual(old_login.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(new_login.status_code, status.HTTP_200_OK)
 
     def test_rejects_invalid_code(self):
         self.request_code()
@@ -341,3 +357,81 @@ class PasswordResetTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.user.refresh_from_db()
         self.assertTrue(self.user.check_password('old-valid-password'))
+
+    def test_reset_targets_login_account_when_another_user_shares_email(self):
+        # The older account matches by email, but login uses the username.
+        self.user.username = 'legacy-account'
+        self.user.save(update_fields=['username'])
+        login_user = User.objects.create_user(
+            username=self.user.email,
+            email=self.user.email,
+            password='old-login-password',
+        )
+        self.request_code()
+        code = next(part for part in mail.outbox[0].body.split() if part.isdigit())
+        response = self.client.post(
+            reverse('password_reset_confirm'),
+            {
+                'email': self.user.email,
+                'code': code,
+                'new_password': 'new-login-password-2026',
+            },
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        login_user.refresh_from_db()
+        self.user.refresh_from_db()
+        self.assertTrue(login_user.check_password('new-login-password-2026'))
+        self.assertFalse(login_user.check_password('old-login-password'))
+        self.assertTrue(self.user.check_password('old-valid-password'))
+
+        old_login = self.client.post(
+            reverse('token_obtain_pair'),
+            {'username': login_user.username, 'password': 'old-login-password'},
+            format='json',
+        )
+        new_login = self.client.post(
+            reverse('token_obtain_pair'),
+            {'username': login_user.username, 'password': 'new-login-password-2026'},
+            format='json',
+        )
+        self.assertEqual(old_login.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(new_login.status_code, status.HTTP_200_OK)
+
+    def test_ambiguous_email_does_not_reset_an_arbitrary_account(self):
+        self.user.username = 'first-account'
+        self.user.save(update_fields=['username'])
+        User.objects.create_user(
+            username='second-account',
+            email=self.user.email,
+            password='second-account-password',
+        )
+        response = self.request_code()
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(mail.outbox), 0)
+        self.assertFalse(self.user.password_reset_codes.exists())
+
+    def test_previous_code_cannot_change_a_different_login_account(self):
+        self.user.username = 'legacy-account'
+        self.user.save(update_fields=['username'])
+        self.request_code()
+        code = next(part for part in mail.outbox[0].body.split() if part.isdigit())
+        login_user = User.objects.create_user(
+            username=self.user.email,
+            email=self.user.email,
+            password='old-login-password',
+        )
+        response = self.client.post(
+            reverse('password_reset_confirm'),
+            {
+                'email': self.user.email,
+                'code': code,
+                'new_password': 'new-login-password-2026',
+            },
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.user.refresh_from_db()
+        login_user.refresh_from_db()
+        self.assertTrue(self.user.check_password('old-valid-password'))
+        self.assertTrue(login_user.check_password('old-login-password'))

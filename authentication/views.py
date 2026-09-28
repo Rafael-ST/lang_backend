@@ -1,7 +1,6 @@
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.db import transaction
-from django.db.models import Q
 from django.contrib.auth.hashers import check_password, make_password
 from django.core.mail import send_mail
 from django.utils import timezone
@@ -237,6 +236,21 @@ class LogoutView(APIView):
         return response
 
 
+def get_password_reset_user(email):
+    """Prefer the login username; never pick an arbitrary shared-email account."""
+    for lookup in (
+        {'username': email},
+        {'username__iexact': email},
+        {'email__iexact': email},
+    ):
+        matches = list(User.objects.filter(**lookup).order_by('pk')[:2])
+        if matches:
+            if len(matches) == 1 and matches[0].is_active:
+                return matches[0]
+            return None
+    return None
+
+
 class PasswordResetRequestView(APIView):
     permission_classes = [permissions.AllowAny]
     throttle_scope = 'password_reset_request'
@@ -245,10 +259,7 @@ class PasswordResetRequestView(APIView):
         serializer = PasswordResetRequestSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         email = serializer.validated_data['email'].strip().lower()
-        user = User.objects.filter(
-            Q(email__iexact=email) | Q(username__iexact=email),
-            is_active=True,
-        ).first()
+        user = get_password_reset_user(email)
 
         if user:
             code = f'{secrets.randbelow(1_000_000):06d}'
@@ -320,14 +331,16 @@ class PasswordResetConfirmView(APIView):
         serializer = PasswordResetConfirmSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         email = serializer.validated_data['email'].strip().lower()
+        target_user = get_password_reset_user(email)
+        if target_user is None:
+            raise serializers.ValidationError({'code': 'Codigo invalido ou expirado.'})
 
         with transaction.atomic():
             reset_code = (
                 PasswordResetCode.objects.select_for_update()
                 .select_related('user')
                 .filter(
-                    Q(user__email__iexact=email) |
-                    Q(user__username__iexact=email),
+                    user=target_user,
                     used_at__isnull=True,
                     is_active=True,
                 )
