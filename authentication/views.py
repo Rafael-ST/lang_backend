@@ -6,6 +6,7 @@ from django.contrib.auth import get_user_model
 from django.db import transaction
 from django.contrib.auth.hashers import check_password, make_password
 from django.core.mail import send_mail
+from django.template.loader import render_to_string
 from django.utils import timezone
 from datetime import timedelta
 import secrets
@@ -292,12 +293,14 @@ class PasswordResetRequestView(APIView):
                 )
 
             try:
+                email_context = {'code': code}
                 sent_count = send_mail(
                     subject='Código para redefinir sua senha no Lang',
-                    message=(
-                        f'Seu código de redefinição é: {code}\n\n'
-                        'Ele expira em 15 minutos. Se você não solicitou esta '
-                        'alteração, ignore esta mensagem.'
+                    message=render_to_string(
+                        'authentication/emails/password_reset.txt', email_context,
+                    ),
+                    html_message=render_to_string(
+                        'authentication/emails/password_reset.html', email_context,
                     ),
                     from_email=settings.DEFAULT_FROM_EMAIL,
                     recipient_list=[email],
