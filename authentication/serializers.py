@@ -4,12 +4,14 @@ import warnings
 
 from django.contrib.auth import get_user_model
 from django.core.files.base import ContentFile
+from django.db import transaction
 from django.contrib.auth.password_validation import validate_password
 from PIL import Image, ImageOps, UnidentifiedImageError
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
 from perfil.models import DEFAULT_PROFILE_POINTS, Perfil
+from authentication.audit import registrar_login
 
 
 User = get_user_model()
@@ -21,6 +23,7 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         'no_active_account': 'E-mail ou senha inválidos.',
     }
 
+    @transaction.atomic
     def validate(self, attrs):
         data = super().validate(attrs)
         user = self.user
@@ -34,6 +37,7 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
             'is_staff': user.is_staff,
         }
 
+        registrar_login(self.context.get('request'), user)
         return data
 
 

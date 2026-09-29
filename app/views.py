@@ -106,17 +106,14 @@ class AccountDeletionRequestView(FormView):
                     recipient_list=[email],
                     fail_silently=False,
                 )
-                print(
+                logger.info(
                     '[account-deletion] Confirmação enviada com sucesso '
-                    f'(request_id={deletion_request.pk}).',
-                    flush=True,
+                    '(request_id=%s).', deletion_request.pk,
                 )
-            except Exception as exc:
-                print(
+            except Exception:
+                logger.error(
                     '[account-deletion] Falha ao enviar confirmação '
-                    f'(request_id={deletion_request.pk}): '
-                    f'{type(exc).__name__}: {exc}',
-                    flush=True,
+                    '(request_id=%s).', deletion_request.pk,
                 )
 
         return self._success_response()
@@ -205,11 +202,10 @@ class AccountDeletionConfirmView(View):
 
     def _notify_privacy_contact(self, deletion_request):
         if not settings.PRIVACY_CONTACT_EMAIL:
-            print(
+            logger.warning(
                 '[account-deletion] Solicitação confirmada; configure '
                 'PRIVACY_CONTACT_EMAIL para receber notificações '
-                f'(request_id={deletion_request.pk}).',
-                flush=True,
+                '(request_id=%s).', deletion_request.pk,
             )
             return
 
@@ -227,7 +223,7 @@ class AccountDeletionConfirmView(View):
                 fail_silently=False,
             )
         except Exception:
-            logger.exception(
+            logger.error(
                 'Falha ao notificar o contato de privacidade sobre a '
                 'solicitação %s.',
                 deletion_request.pk,

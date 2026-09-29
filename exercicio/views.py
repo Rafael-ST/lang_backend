@@ -1,4 +1,5 @@
-﻿from django.db import transaction
+from app.audit_mixins import AuditModelMixin
+from django.db import transaction
 from django.utils import timezone
 import unicodedata
 import re
@@ -97,7 +98,7 @@ def validate_exercise_answer(exercise, answer):
     return False
 
 
-class ExerciseViewSet(viewsets.ModelViewSet):
+class ExerciseViewSet(AuditModelMixin, viewsets.ModelViewSet):
     serializer_class = ExerciseSerializer
     permission_classes = [IsAuthenticated]
     filter_backends = [

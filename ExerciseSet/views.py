@@ -1,4 +1,5 @@
-﻿from rest_framework import filters, status, viewsets
+from app.audit_mixins import AuditModelMixin
+from rest_framework import filters, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAdminUser, IsAuthenticated
 from rest_framework.response import Response
@@ -9,7 +10,7 @@ from ExerciseSet.serializers import ExerciseSetImageSerializer, ExerciseSetProgr
 from exercicio.models import ExerciseAttempt
 
 
-class ExerciseSetViewSet(viewsets.ModelViewSet):
+class ExerciseSetViewSet(AuditModelMixin, viewsets.ModelViewSet):
     queryset = ExerciseSet.objects.select_related('sublevel', 'image').prefetch_related('exercises', 'progresses').all().order_by('order', 'created_at')
     serializer_class = ExerciseSetSerializer
     permission_classes = [IsAuthenticated]
@@ -64,7 +65,7 @@ class ExerciseSetViewSet(viewsets.ModelViewSet):
         )
 
 
-class ExerciseSetImageViewSet(viewsets.ModelViewSet):
+class ExerciseSetImageViewSet(AuditModelMixin, viewsets.ModelViewSet):
     queryset = ExerciseSetImage.objects.all().order_by('name')
     serializer_class = ExerciseSetImageSerializer
     permission_classes = [IsAdminUser]

@@ -1,3 +1,6 @@
+import logging
+from collections.abc import Mapping
+
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.db import transaction
@@ -13,6 +16,7 @@ from rest_framework.parsers import MultiPartParser
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.decorators import action
+from rest_framework.exceptions import AuthenticationFailed, ValidationError
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.exceptions import TokenError
@@ -26,10 +30,16 @@ from authentication.serializers import (
     UserSerializer,
 )
 from authentication.models import PasswordResetCode
+from authentication.audit import (
+    USUARIO_AUDITORIA_USERNAME, registrar_falha_login, registrar_login,
+    registrar_redefinicao_senha,
+)
+from app.audit_mixins import AuditModelMixin
 from perfil.models import DEFAULT_PROFILE_POINTS, Perfil
 
 
 User = get_user_model()
+logger = logging.getLogger(__name__)
 
 
 def serialize_authenticated_user(user):
@@ -144,6 +154,7 @@ class GoogleAuthView(APIView):
                 user=user,
                 defaults={'pontos': DEFAULT_PROFILE_POINTS},
             )
+            registrar_login(request, user)
 
         return build_token_response(user)
 
@@ -153,7 +164,12 @@ class CustomTokenObtainPairView(TokenObtainPairView):
     throttle_scope = 'auth'
 
     def post(self, request, *args, **kwargs):
-        response = super().post(request, *args, **kwargs)
+        try:
+            response = super().post(request, *args, **kwargs)
+        except (AuthenticationFailed, ValidationError):
+            username = request.data.get('username') if isinstance(request.data, Mapping) else None
+            registrar_falha_login(request, username)
+            raise
 
         refresh = response.data.get('refresh')
         access = response.data.get('access')
@@ -288,29 +304,14 @@ class PasswordResetRequestView(APIView):
                     fail_silently=False,
                 )
                 if sent_count == 1:
-                    print(
-                        '[password-reset] E-mail enviado com sucesso '
-                        f'(user_id={user.pk}).',
-                        flush=True,
-                    )
+                    logger.info('E-mail de redefinição enviado (user_id=%s).', user.pk)
                 else:
-                    print(
-                        '[password-reset] E-mail não enviado: o backend de '
-                        f'e-mail retornou {sent_count} envios (user_id={user.pk}).',
-                        flush=True,
-                    )
-            except Exception as exc:
-                print(
-                    '[password-reset] Falha ao enviar e-mail '
-                    f'(user_id={user.pk}): {type(exc).__name__}: {exc}',
-                    flush=True,
-                )
+                    logger.error('E-mail de redefinição não enviado (user_id=%s).', user.pk)
+            except Exception:
+                # Respostas do provedor podem conter destinatários e códigos.
+                logger.error('Falha ao enviar e-mail de redefinição (user_id=%s).', user.pk)
         else:
-            print(
-                '[password-reset] Nenhum e-mail enviado: usuário ativo '
-                'não encontrado.',
-                flush=True,
-            )
+            logger.info('Redefinição de senha: usuário ativo não encontrado.')
 
         return Response(
             {
@@ -384,6 +385,7 @@ class PasswordResetConfirmView(APIView):
                 used_at__isnull=True,
                 is_active=True,
             ).exclude(pk=reset_code.pk).update(is_active=False)
+            registrar_redefinicao_senha(request, user)
 
         return Response(
             {'detail': 'Senha redefinida com sucesso.'},
@@ -391,8 +393,8 @@ class PasswordResetConfirmView(APIView):
         )
 
 
-class UserViewSet(viewsets.ModelViewSet):
-    queryset = User.objects.all().order_by('username')
+class UserViewSet(AuditModelMixin, viewsets.ModelViewSet):
+    queryset = User.objects.exclude(username=USUARIO_AUDITORIA_USERNAME).order_by('username')
     serializer_class = UserSerializer
     permission_classes = [permissions.IsAdminUser]
     filter_backends = [
@@ -413,13 +415,15 @@ class UserViewSet(viewsets.ModelViewSet):
         return super().get_permissions()
 
     @action(detail=False, methods=['get', 'patch', 'delete'], url_path='me')
+    @transaction.atomic
     def me(self, request):
         if request.method == 'GET':
             return Response(self.get_serializer(request.user).data)
 
         if request.method == 'DELETE':
             with transaction.atomic():
-                request.user.delete()
+                user = User.objects.select_for_update().get(pk=request.user.pk)
+                self.perform_destroy(user)
 
             response = Response(status=status.HTTP_204_NO_CONTENT)
             response.delete_cookie(
@@ -429,9 +433,10 @@ class UserViewSet(viewsets.ModelViewSet):
             )
             return response
 
-        serializer = self.get_serializer(request.user, data=request.data, partial=True)
+        user = User.objects.select_for_update().get(pk=request.user.pk)
+        serializer = self.get_serializer(user, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
-        serializer.save()
+        self.perform_update(serializer)
         return Response(serializer.data)
 
     @action(

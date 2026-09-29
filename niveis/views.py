@@ -1,3 +1,4 @@
+from app.audit_mixins import AuditModelMixin
 from rest_framework import filters, viewsets
 from rest_framework.permissions import IsAdminUser, IsAuthenticated
 
@@ -6,7 +7,7 @@ from niveis.models import Nivel
 from niveis.serializers import NivelSerializer
 
 
-class NivelViewSet(viewsets.ModelViewSet):
+class NivelViewSet(AuditModelMixin, viewsets.ModelViewSet):
     queryset = Nivel.objects.all().order_by('nome')
     permission_classes = [IsAuthenticated]
     serializer_class = NivelSerializer

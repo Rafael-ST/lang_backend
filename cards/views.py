@@ -1,3 +1,4 @@
+from app.audit_mixins import AuditModelMixin
 from django.db import transaction
 from rest_framework import filters, status, viewsets
 from rest_framework.decorators import action
@@ -9,7 +10,7 @@ from cards.serializers import CardSerializer, MarkCardsSeenSerializer
 from rest_framework.permissions import IsAdminUser, IsAuthenticated
 
 
-class CardViewSet(viewsets.ModelViewSet):
+class CardViewSet(AuditModelMixin, viewsets.ModelViewSet):
     queryset = Card.objects.all().order_by('english_name')
     serializer_class = CardSerializer
     permission_classes = [IsAuthenticated]

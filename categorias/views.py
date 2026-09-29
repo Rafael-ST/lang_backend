@@ -1,3 +1,4 @@
+from app.audit_mixins import AuditModelMixin
 from rest_framework import filters, viewsets
 from rest_framework.permissions import IsAdminUser, IsAuthenticated
 
@@ -6,7 +7,7 @@ from categorias.models import Categoria
 from categorias.serializers import CategoriaSerializer
 
 
-class CategoriaViewSet(viewsets.ModelViewSet):
+class CategoriaViewSet(AuditModelMixin, viewsets.ModelViewSet):
     queryset = Categoria.objects.all().order_by('nome')
     serializer_class = CategoriaSerializer
     filter_backends = [
